@@ -17,10 +17,13 @@ const games = await getCollection('games');
 
 	<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
 		{games.map((game) => (
-			<a href={`/play/${game.slug}`} class="group bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-purple-500 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-2xl">
+			<a href={`/games/${game.data.folder}/index.html`} target="_blank" class="group bg-gray-800 rounded-xl overflow-hidden border border-gray-700 hover:border-purple-500 transition-all duration-300 transform hover:-translate-y-1 hover:shadow-2xl">
 				<div class="aspect-video bg-gray-900 flex items-center justify-center border-b border-gray-700 relative overflow-hidden">
 					<span class="text-6xl group-hover:scale-110 transition-transform duration-300">🕹️</span>
 					<div class="absolute inset-0 bg-purple-900/10 group-hover:bg-purple-900/20 transition-colors"></div>
+                    <div class="absolute bottom-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity">
+                        Opens in new tab ↗
+                    </div>
 				</div>
 				<div class="p-6">
 					<h2 class="text-2xl font-bold text-white mb-2 group-hover:text-purple-400 transition-colors">{game.data.title}</h2>

@@ -19,7 +19,12 @@ const gameUrl = `/games/${game.data.folder}/index.html`;
 		<a href="/" class="text-purple-400 hover:text-purple-300 transition-colors flex items-center gap-2 mb-4">
 			← Back to Arcade
 		</a>
-		<h1 class="text-4xl font-bold text-white mb-2">{game.data.title}</h1>
+		<div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
+            <h1 class="text-4xl font-bold text-white">{game.data.title}</h1>
+            <a href={gameUrl} target="_blank" class="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 transition-colors shadow-lg">
+                Full Screen ↗
+            </a>
+        </div>
 		<p class="text-gray-400">{game.data.description}</p>
 	</div>
 
