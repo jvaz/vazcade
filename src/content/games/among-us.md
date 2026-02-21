@@ -10,4 +10,10 @@ controls: "WASD / Joystick to move. Buttons to interact."
 
 This is a recreation of Among Us using HTML5 Canvas.
 
-**Note:** The game logic is currently missing from the source code. Please update the `index.html` file with the full JavaScript code.
+Controls:
+- **Move:** WASD or Touch Joystick
+- **Interact:** Click/Tap "USE" button or Spacebar
+- **Kill:** Click/Tap "KILL" button (Impostor only)
+- **Report:** Click/Tap "REPORT" button or R key
+- **Vent:** Click/Tap "VENT" button (Impostor only)
+
