@@ -50,10 +50,8 @@ transition: all 0.3s; }
 
 
 center; gap: 15px; z-index: 20; backdrop-filter: blur(2px); pointer-events: auto; }
-.btn-confirm { background: #22c55e; border: 2px solid #16a34a; width: 45px; height: 45px; border-radius: 50%; display: flex; justify-
-content: center; align-items: center; font-size: 1.5rem; color: white; cursor: pointer; pointer-events: auto; }
-.btn-cancel { background: #ef4444; border: 2px solid #dc2626; width: 45px; height: 45px; border-radius: 50%; display: flex; justify-
-content: center; align-items: center; font-size: 1.5rem; color: white; cursor: pointer; pointer-events: auto; }
+.btn-confirm { background: #22c55e; border: 2px solid #16a34a; width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; color: white; cursor: pointer; pointer-events: auto; }
+.btn-cancel { background: #ef4444; border: 2px solid #dc2626; width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; color: white; cursor: pointer; pointer-events: auto; }
 #chat-modal { position: absolute; inset: 0; z-index: 30; }
 @media (min-width: 768px) { #chat-modal { left: auto; width: 450px; } }
 .chat-message { background: rgba(0,0,0,0.4); border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; width: fit-content; max-
@@ -80,11 +78,9 @@ transition: transform 0.1s; }
 </head>
 <body>
 <div id="lobby-screen" class="overlay">
-<h1 class="text-6xl md:text-8xl font-black mb-2 text-white tracking-widest drop-shadow-[0_5px_15px_rgba(0,0,0,1)] text-
-center">AMONG US</h1>
+<h1 class="text-6xl md:text-8xl font-black mb-2 text-white tracking-widest drop-shadow-[0_5px_15px_rgba(0,0,0,1)] text-center">AMONG US</h1>
 <p class="text-2xl mb-8 text-gray-300 font-bold text-red-500 tracking-widest">CANVAS EDITION</p>
-<div class="bg-gray-800 p-8 rounded-2xl flex flex-col items-center border-4 border-gray-600 w-full max-w-lg shadow-
-[0_0_40px_rgba(0,0,0,0.8)]">
+<div class="bg-gray-800 p-8 rounded-2xl flex flex-col items-center border-4 border-gray-600 w-full max-w-lg shadow-[0_0_40px_rgba(0,0,0,0.8)]">
 <h2 class="text-2xl font-bold mb-2 text-gray-300 uppercase tracking-widest">Crew Lobby</h2>
 <p class="text-sm text-gray-400 mb-6 text-center">Controls: WASD, Click/Touch to Move</p>
 <div id="lobby-players" class="w-full flex flex-wrap justify-center gap-4 mb-8 min-h-[60px]"></div>
@@ -102,14 +98,12 @@ text-white">Start Game</button>
 </div>
 <div id="kill-screen" class="overlay hidden bg-black z-[55]">
 <div class="relative w-full h-full max-w-4xl flex items-center justify-center overflow-hidden">
-<div id="kill-attacker" class="absolute z-10 w-48 h-56 rounded-t-[90px] rounded-b-3xl border-[10px] border-black shadow-
-[inset_-15px_-15px_0_rgba(0,0,0,0.3)]">
+<div id="kill-attacker" class="absolute z-10 w-48 h-56 rounded-t-[90px] rounded-b-3xl border-[10px] border-black shadow-[inset_-15px_-15px_0_rgba(0,0,0,0.3)]">
 <div class="absolute top-10 left-[-10px] w-36 h-20 bg-blue-200 border-[10px] border-gray-700 rounded-full"></div>
 <div class="absolute top-12 right-[-40px] w-20 h-36 border-[10px] border-black rounded-r-3xl z-[-1] opacity-80 shadow-lg"
 style="background: inherit;"></div>
 </div>
-<div id="kill-victim" class="absolute z-10 w-48 h-56 rounded-t-[90px] rounded-b-3xl border-[10px] border-black shadow-
-[inset_-15px_-15px_0_rgba(0,0,0,0.3)]">
+<div id="kill-victim" class="absolute z-10 w-48 h-56 rounded-t-[90px] rounded-b-3xl border-[10px] border-black shadow-[inset_-15px_-15px_0_rgba(0,0,0,0.3)]">
 <div class="absolute top-10 left-[-10px] w-36 h-20 bg-blue-200 border-[10px] border-gray-700 rounded-full"></div>
 </div>
 <div id="kill-slash" class="absolute z-20 w-full h-6 bg-white shadow-[0_0_30px_white]"></div>
@@ -124,8 +118,7 @@ style="background: inherit;"></div>
 <div id="action-vent" class="action-btn"><i class="fas fa-sign-in-alt text-2xl"></i></div>
 <div id="action-report" class="action-btn"><i class="fas fa-bullhorn text-3xl"></i></div>
 <div id="action-main" class="action-btn">USE</div>
-<div id="cooldown-indicator" class="hidden absolute bottom-[240px] right-10 text-red-500 font-bold text-xl drop-shadow-md bg-
-black bg-opacity-80 px-4 py-2 rounded-lg border-2 border-red-900 tracking-wider"></div>
+<div id="cooldown-indicator" class="hidden absolute bottom-[240px] right-10 text-red-500 font-bold text-xl drop-shadow-md bg-black bg-opacity-80 px-4 py-2 rounded-lg border-2 border-red-900 tracking-wider"></div>
 </div>
 <!-- Tasks UIs -->
 <div id="task-download" class="task-window hidden w-80 h-64 flex-col justify-between items-center text-center">
@@ -134,8 +127,7 @@ black bg-opacity-80 px-4 py-2 rounded-lg border-2 border-red-900 tracking-wider"
 <div class="w-full h-8 bg-gray-800 rounded-md overflow-hidden border-2 border-black mt-4 shadow-inner">
 <div id="download-progress" class="h-full bg-blue-500 w-0 transition-all duration-100"></div>
 </div>
-<button id="btn-download" class="mt-4 px-8 py-3 bg-blue-600 text-white font-bold rounded shadow-lg hover:bg-blue-500 active:bg-
-blue-700 transition-colors pointer-events-auto">DOWNLOAD</button>
+<button id="btn-download" class="mt-4 px-8 py-3 bg-blue-600 text-white font-bold rounded shadow-lg hover:bg-blue-500 active:bg-blue-700 transition-colors pointer-events-auto">DOWNLOAD</button>
 </div>
 <div id="task-wires" class="task-window hidden w-[450px] h-[350px] flex-col">
 <h3 class="text-2xl font-black mb-4 text-center uppercase text-gray-800">Fix Wiring</h3>
@@ -167,8 +159,7 @@ transition-colors">&times;</button>
 <h3 class="text-2xl font-black mb-2 uppercase text-gray-800">Enter ID Code</h3>
 <div class="flex items-center justify-between w-full px-4 mb-4">
 <div class="text-sm font-bold text-gray-600">CODE:</div>
-<div id="keypad-target" class="font-mono text-2xl font-black text-blue-700 tracking-widest bg-gray-300 px-4 py-1 rounded border-
-2 border-gray-400">12345</div>
+<div id="keypad-target" class="font-mono text-2xl font-black text-blue-700 tracking-widest bg-gray-300 px-4 py-1 rounded border-2 border-gray-400">12345</div>
 </div>
 <div id="keypad-display" class="w-full h-16 bg-black text-green-400 font-mono text-4xl flex items-center justify-end px-4 rounded-xl
 border-4 border-gray-700 mb-4 tracking-widest"></div>
@@ -182,8 +173,7 @@ transition-colors">&times;</button>
 
 
 <div class="text-center shrink-0 mb-4 relative z-10">
-<button id="toggle-chat-btn" class="absolute top-2 right-2 md:top-0 md:right-0 bg-blue-600 hover:bg-blue-500 border-2 border-
-blue-400 text-white px-5 py-3 rounded-xl font-bold text-xl shadow-lg transition transform hover:scale-105 pointer-events-auto z-50 flex
+<button id="toggle-chat-btn" class="absolute top-2 right-2 md:top-0 md:right-0 bg-blue-600 hover:bg-blue-500 border-2 border-blue-400 text-white px-5 py-3 rounded-xl font-bold text-xl shadow-lg transition transform hover:scale-105 pointer-events-auto z-50 flex
 items-center gap-2" onclick="toggleChat()">
 <span class="text-3xl">🗣</span> <span class="hidden sm:inline">Chat</span>
 <div id="chat-badge" class="absolute -top-3 -right-3 bg-red-600 text-white text-sm font-black w-8 h-8 flex items-center
@@ -191,13 +181,11 @@ justify-center rounded-full border-2 border-gray-900 shadow-lg hidden">0</div>
 </button>
 <h2 id="meeting-title" class="text-4xl md:text-5xl font-black mb-2 tracking-widest uppercase mt-4 md:mt-0"></h2>
 <p id="meeting-subtitle" class="text-xl text-gray-300 font-semibold"></p>
-<div class="mt-2 text-3xl font-mono bg-black text-red-500 border-2 border-red-500 px-6 py-2 rounded-lg shadow-
-[0_0_15px_rgba(255,0,0,0.4)] inline-block">
+<div class="mt-2 text-3xl font-mono bg-black text-red-500 border-2 border-red-500 px-6 py-2 rounded-lg shadow-[0_0_15px_rgba(255,0,0,0.4)] inline-block">
 <i class="fas fa-clock mr-2"></i><span id="meeting-timer">0</span>
 </div>
 </div>
-<div class="flex-1 bg-cyan-900 rounded-3xl border-8 border-gray-400 flex flex-col pointer-events-auto shadow-
-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden relative w-full">
+<div class="flex-1 bg-cyan-900 rounded-3xl border-8 border-gray-400 flex flex-col pointer-events-auto shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden relative w-full">
 <div class="bg-gray-800 px-6 py-4 font-bold text-gray-200 border-b-4 border-gray-900 tracking-wider flex justify-between items-
 center text-xl">
 <span><i class="fas fa-tablet-alt text-cyan-400 mr-2"></i> WHO IS THE IMPOSTOR?</span>
@@ -234,8 +222,7 @@ md text-xl" onclick="sendMyChat()">
 </div>
 </div>
 </div>
-<div id="vote-tally-overlay" class="absolute inset-0 bg-black bg-opacity-90 z-40 hidden flex-col justify-center items-center pointer-
-events-none">
+<div id="vote-tally-overlay" class="absolute inset-0 bg-black bg-opacity-90 z-40 hidden flex-col justify-center items-center pointer-events-none">
 <h2 id="vote-results-title" class="text-5xl font-black text-white mb-6 drop-shadow-lg text-center px-4"></h2>
 <div id="vote-results-subtitle" class="text-2xl text-gray-300 font-semibold mb-12"></div>
 </div>
@@ -244,8 +231,7 @@ events-none">
 <h1 id="end-title" class="text-7xl md:text-9xl font-black mb-4 tracking-widest drop-shadow-[0_0_30px_rgba(255,255,255,0.5)]">
 </h1>
 <p id="end-subtitle" class="text-2xl md:text-4xl mb-12 text-gray-300 font-semibold"></p>
-<button id="return-lobby-btn" class="px-10 py-5 bg-white text-black hover:bg-gray-300 rounded-xl text-3xl font-black shadow-
-[0_0_20px_rgba(255,255,255,0.5)] transition-all pointer-events-auto cursor-pointer uppercase">Play Again</button>
+<button id="return-lobby-btn" class="px-10 py-5 bg-white text-black hover:bg-gray-300 rounded-xl text-3xl font-black shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all pointer-events-auto cursor-pointer uppercase">Play Again</button>
 
 
 
@@ -353,16 +339,14 @@ function updateLobbyUI() {
 const c = document.getElementById('lobby-players'); c.innerHTML = '';
 for (let id in players) {
 const p = players[id]; const d = document.createElement('div');
-d.className = `w-16 h-16 rounded-full border-4 ${p.isBot?'border-gray-500':'border-white'} flex items-center justify-center font-
-bold text-sm shadow-xl relative overflow-hidden`;
+d.className = `w-16 h-16 rounded-full border-4 ${p.isBot?'border-gray-500':'border-white'} flex items-center justify-center font-bold text-sm shadow-xl relative overflow-hidden`;
 d.style.backgroundColor = p.color; d.innerHTML = `<div class="absolute inset-0 bg-black opacity-10"></div><span
 class="relative z-10 drop-shadow-md">${p.name}</span>`; c.appendChild(d);
 }
 }
 function changeState(st) {
 gameState.status = st;
-['lobby-screen','intro-screen','kill-screen','ui-layer','meeting-screen','end-screen','task-download','task-wires', 'task-swipe', 'task-
-keypad'].forEach(id => document.getElementById(id).classList.add('hidden'));
+['lobby-screen','intro-screen','kill-screen','ui-layer','meeting-screen','end-screen','task-download','task-wires', 'task-swipe', 'task-keypad'].forEach(id => document.getElementById(id).classList.add('hidden'));
 if(st==='lobby') { document.getElementById('lobby-screen').classList.remove('hidden'); initGame(); }
 else if(st==='intro') { playIntroSequence(); }
 else if(st==='playing') {
@@ -405,12 +389,10 @@ setTimeout(() => {
 sh.classList.add('hidden'); sh.classList.remove('shhh-anim');
 cont.classList.remove('hidden'); cont.classList.add('anim-pop');
 if(players[myId].isImpostor) {
-txt.innerText = "IMPOSTOR"; txt.className = "text-7xl md:text-9xl font-black tracking-widest mb-4 text-red-600 drop-
-shadow-[0_0_30px_red]";
+txt.innerText = "IMPOSTOR"; txt.className = "text-7xl md:text-9xl font-black tracking-widest mb-4 text-red-600 drop-shadow-[0_0_30px_red]";
 sub.innerText = "Kill the crewmates."; sub.className = "text-2xl md:text-4xl font-semibold text-red-400";
 } else {
-txt.innerText = "CREWMATE"; txt.className = "text-7xl md:text-9xl font-black tracking-widest mb-4 text-cyan-400 drop-
-shadow-[0_0_30px_cyan]";
+txt.innerText = "CREWMATE"; txt.className = "text-7xl md:text-9xl font-black tracking-widest mb-4 text-cyan-400 drop-shadow-[0_0_30px_cyan]";
 sub.innerText = "Complete tasks to win."; sub.className = "text-2xl md:text-4xl font-semibold text-blue-200";
 }
 }, 2000);
@@ -572,12 +554,10 @@ if (m.inVent) { m.inVent = false; m.ventId = null; }
 else { m.inVent = true; m.ventId = actionState.ventTarget.id; m.x = actionState.ventTarget.x; m.y = actionState.ventTarget.y; }
 updateActionState();
 };
-document.getElementById('action-main').addEventListener('mousedown', handleActionMain); document.getElementById('action-
-main').addEventListener('touchstart', handleActionMain, {passive: false});
+document.getElementById('action-main').addEventListener('mousedown', handleActionMain); document.getElementById('action-main').addEventListener('touchstart', handleActionMain, {passive: false});
 document.getElementById('action-report').addEventListener('mousedown', handleActionReport); document.getElementById('
 action-report').addEventListener('touchstart', handleActionReport, {passive: false});
-document.getElementById('action-vent').addEventListener('mousedown', handleActionVent); document.getElementById('action-
-vent').addEventListener('touchstart', handleActionVent, {passive: false});
+document.getElementById('action-vent').addEventListener('mousedown', handleActionVent); document.getElementById('action-vent').addEventListener('touchstart', handleActionVent, {passive: false});
 document.addEventListener('keydown', e => {
 if (e.target && e.target.tagName.toLowerCase() === 'input') return;
 if (e.code === 'Space') { e.preventDefault(); handleActionMain(); }
@@ -619,8 +599,7 @@ currentTask=null; clearInterval(dlTimer);
 function finishTask() { if(currentTask) currentTask.completed = true; gameState.completedTasks++; updateTaskBar(); closeTask();
 }
 function initDownloadTask() {
-document.getElementById('task-download').classList.remove('hidden'); document.getElementById('task-
-download').classList.add('flex');
+document.getElementById('task-download').classList.remove('hidden'); document.getElementById('task-download').classList.add('flex');
 const bar = document.getElementById('download-progress'); bar.style.width='0%';
 const btn = document.getElementById('btn-download'); btn.innerText='DOWNLOAD'; btn.disabled=false;
 btn.onclick = () => {
@@ -665,8 +644,7 @@ activeWireNode=null; wireConnections++; if(wireConnections>=4) setTimeout(finish
 let cardObj = document.getElementById('swipe-card'); let swipeActive = false, swipeStartX = 0, swipeStartTime = 0;
 function initSwipeTask() {
 document.getElementById('task-swipe').classList.remove('hidden'); document.getElementById('task-swipe').classList.add('flex');
-let msg = document.getElementById('swipe-msg'); msg.innerText = "Please swipe card"; msg.className = "text-xl mb-4 font-
-bold text-gray-700";
+let msg = document.getElementById('swipe-msg'); msg.innerText = "Please swipe card"; msg.className = "text-xl mb-4 font-bold text-gray-700";
 cardObj.style.left = '16px'; cardObj.style.transition = 'none';
 }
 cardObj.onmousedown = cardObj.ontouchstart = (e) => {
@@ -695,8 +673,7 @@ else { msg.innerText = "Accepted."; msg.className = "text-xl mb-4 font-bold text
 // Keypad Task
 let keypadCode = ''; let keypadTarget = '';
 function initKeypadTask() {
-document.getElementById('task-keypad').classList.remove('hidden'); document.getElementById('task-
-keypad').classList.add('flex');
+document.getElementById('task-keypad').classList.remove('hidden'); document.getElementById('task-keypad').classList.add('flex');
 
 
 
@@ -785,8 +762,7 @@ document.getElementById('chat-modal').classList.add('hidden'); document.getEleme
 flex'); document.getElementById('chat-badge').classList.add('hidden');
 const tit = document.getElementById('meeting-title'); const sub = document.getElementById('meeting-subtitle');
 let repName = players[gameState.reporterId] ? players[gameState.reporterId].name : "Someone";
-if(gameState.bodyColor) { tit.innerText = "DEAD BODY REPORTED"; tit.className="text-4xl md:text-5xl font-black mb-2 tracking-
-widest uppercase text-red-500 drop-shadow-[0_0_15px_red]"; sub.innerText=`Found by ${repName}`; }
+if(gameState.bodyColor) { tit.innerText = "DEAD BODY REPORTED"; tit.className="text-4xl md:text-5xl font-black mb-2 tracking-widest uppercase text-red-500 drop-shadow-[0_0_15px_red]"; sub.innerText=`Found by ${repName}`; }
 else { tit.innerText = "EMERGENCY MEETING"; tit.className="text-4xl md:text-5xl font-black mb-2 tracking-widest uppercase
 text-yellow-400 drop-shadow-[0_0_15px_yellow]"; sub.innerText=`Called by ${repName}`; }
 document.getElementById('vote-tally-overlay').classList.add('hidden');
@@ -930,8 +906,7 @@ if(win) {
 let m = players[myId]; const t=document.getElementById('end-title'); const s=document.getElementById('end-subtitle');
 if((win==='IMP'&&m.isImpostor) || (win==='CREW'&&!m.isImpostor)) { t.innerText="VICTORY"; t.className="text-7xl md:text-
 9xl font-black mb-4 tracking-widest text-cyan-400 drop-shadow-[0_0_40px_cyan]"; s.innerText="Mission Accomplished."; }
-else { t.innerText="DEFEAT"; t.className="text-7xl md:text-9xl font-black mb-4 tracking-widest text-red-600 drop-shadow-
-[0_0_40px_red]"; s.innerText="The Impostors won."; }
+else { t.innerText="DEFEAT"; t.className="text-7xl md:text-9xl font-black mb-4 tracking-widest text-red-600 drop-shadow-[0_0_40px_red]"; s.innerText="The Impostors won."; }
 changeState('gameover');
 }
 }
