@@ -80,13 +80,32 @@ content = content.replace(/'action-\nvent'/g, "'action-vent'");
 content = content.replace(/'task-\nkeypad'/g, "'task-keypad'");
 content = content.replace(/'task-\ndownload'/g, "'task-download'");
 
-// Fix generic newlines in IDs
-content = content.replace(/getElementById\('([^']+)-\n([^']+)'\)/g, "getElementById('$1-$2')");
+// Fix dangling keywords at end of line
+// "const \n variable" -> "const variable"
+content = content.replace(/const\s*\n\s*/g, 'const ');
+content = content.replace(/let\s*\n\s*/g, 'let ');
+content = content.replace(/var\s*\n\s*/g, 'var ');
 
-// Fix generic broken quotes
-// Matches: "some text<newline>more text"
-// content = content.replace(/"([^"\n]*)\n([^"]*)"/g, '"$1$2"'); 
-// The regex above is risky on a large file.
+// Fix broken method calls
+// "classList.\nadd" -> "classList.add"
+content = content.replace(/classList\.\s*\n\s*add/g, 'classList.add');
+content = content.replace(/classList\.\s*\n\s*remove/g, 'classList.remove');
+content = content.replace(/classList\.\s*\n\s*replace/g, 'classList.replace');
+content = content.replace(/classList\.\s*\n\s*toggle/g, 'classList.toggle');
+
+// Fix broken document methods
+// "document.\ngetElementById" -> "document.getElementById"
+content = content.replace(/document\.\s*\n\s*getElementById/g, 'document.getElementById');
+content = content.replace(/document\.\s*\n\s*createElement/g, 'document.createElement');
+content = content.replace(/document\.\s*\n\s*addEventListener/g, 'document.addEventListener');
+
+// Fix string breaks in IDs or classes that might have been missed
+// "getElementById('some-\nid')" -> "getElementById('some-id')"
+content = content.replace(/'([^']*[a-z])-\s*\n\s*([a-z][^']*)'/g, "'$1-$2'");
+content = content.replace(/"([^"]*[a-z])-\s*\n\s*([a-z][^"]*)"/g, '"$1-$2"');
+
+// Specific fix for the case found: "const \n btnVent"
+// This is covered by the first regex, but let's double check spaces.
 
 fs.writeFileSync(filePath, content);
-console.log('Applied fixes');
+console.log('Applied fixes phase 2');
