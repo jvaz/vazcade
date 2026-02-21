@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Among Us - Canvas Edition</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; color: white; user-select: none; -webkit-user-select: none; }
+        #game-canvas { display: block; width: 100%; height: 100%; outline: none; }
+        input[type="text"] { user-select: auto !important; -webkit-user-select: auto !important; pointer-events: auto !important; touch-action: auto !important; cursor: text !important; }
+        .overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: rgba(0, 0, 0, 0.9); z-index: 50; }
+        .hidden { display: none !important; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 10; }
+        #joy-base { position: absolute; bottom: 40px; left: 40px; width: 120px; height: 120px; background: rgba(255,255,255,0.15); border: 2px solid rgba(255,255,255,0.4); border-radius: 50%; pointer-events: auto; touch-action: none; z-index: 101; backdrop-filter: blur(4px); display: block; cursor: grab; }
+        #joy-base:active { cursor: grabbing; }
+        #joy-knob { position: absolute; width: 60px; height: 60px; background: rgba(255,255,255,0.9); border-radius: 50%; top: 28px; left: 28px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); pointer-events: none; transition: transform 0.05s linear; }
+        .action-btn { position: absolute; width: 85px; height: 85px; border-radius: 50%; background: rgba(0, 0, 0, 0.4); border: 4px solid rgba(255, 255, 255, 0.3); font-weight: bold; font-size: 1.1rem; display: flex; justify-content: center; align-items: center; pointer-events: auto; cursor: pointer; transition: all 0.1s; touch-action: none; z-index: 100; backdrop-filter: blur(2px); box-shadow: 0 4px 6px rgba(0,0,0,0.3); }
+        .action-btn:active { transform: scale(0.9); background: rgba(255, 255, 255, 0.2); }
+        #action-main { bottom: 40px; right: 40px; }
+        #action-report { bottom: 40px; right: 140px; border-color: #facc15; color: #facc15; opacity: 0.5; pointer-events: none; }
+        #action-report.active { opacity: 1; pointer-events: auto; background: rgba(250, 204, 21, 0.2); }
+        #action-vent { bottom: 140px; right: 40px; border-color: #9ca3af; color: #fff; opacity: 0.5; pointer-events: none; }
+        #action-vent.active { opacity: 1; pointer-events: auto; background: rgba(156, 163, 175, 0.2); }
+        #task-bar-container { position: absolute; top: 20px; left: 20px; width: 300px; height: 24px; background: #1f2937; border: 3px solid #4b5563; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.5); pointer-events: auto; }
+        #task-bar-fill { height: 100%; width: 0%; background: #22c55e; transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: inset 0 -4px 0 rgba(0,0,0,0.2); }
+        .player-vote-card { position: relative; background: #374151; border: 3px solid #4b5563; border-radius: 10px; padding: 12px; display: flex; align-items: center; gap: 12px; cursor: pointer; transition: all 0.2s; pointer-events: auto; overflow: hidden; }
+        .player-vote-card:hover { border-color: #9ca3af; background: #4b5563; }
+        .player-vote-card.selected { border-color: #fff; background: #6b7280; }
+        .player-vote-card.dead { opacity: 0.5; filter: grayscale(80%); pointer-events: none; cursor: not-allowed; }
+        .player-vote-card.voted { border-color: #60a5fa; }
+        .vote-badge-container { display: flex; flex-wrap: wrap; gap: 4px; max-width: 80px; justify-content: flex-end; margin-left: auto; }
+        .vote-badge { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #000; box-shadow: 0 2px 4px rgba(0,0,0,0.5); transition: all 0.3s; }
+        .vote-confirm-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; gap: 15px; z-index: 20; backdrop-filter: blur(2px); pointer-events: auto; }
+        .btn-confirm { background: #22c55e; border: 2px solid #16a34a; width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; color: white; cursor: pointer; pointer-events: auto; }
+        .btn-cancel { background: #ef4444; border: 2px solid #dc2626; width: 45px; height: 45px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 1.5rem; color: white; cursor: pointer; pointer-events: auto; }
+        #chat-modal { position: absolute; inset: 0; z-index: 30; }
+        @media (min-width: 768px) { #chat-modal { left: auto; width: 450px; } }
+        .chat-message { background: rgba(0,0,0,0.4); border-radius: 8px; padding: 8px 12px; margin-bottom: 8px; width: fit-content; max-width: 90%; word-wrap: break-word; }
+        @keyframes popIn { 0% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
+        .anim-pop { animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes slideInRight { 0% { transform: translateX(100%); opacity: 0; } 100% { transform: translateX(0); opacity: 1; } }
+        .anim-slide-right { animation: slideInRight 0.4s ease-out forwards; }
+        @keyframes attackerLunge { 0% { transform: translateX(-150px) rotate(-15deg); opacity: 0; } 50% { transform: translateX(0px) rotate(10deg); opacity: 1; } 100% { transform: translateX(30px) rotate(15deg); opacity: 1; } }
+        @keyframes victimFall { 0% { transform: translateX(150px); opacity: 0; } 50% { transform: translateX(0px); opacity: 1; } 100% { transform: translateX(0px) translateY(80px) rotate(45deg); opacity: 0; } }
+        @keyframes slashEffect { 0% { transform: scale(0) rotate(-20deg); opacity: 1; } 50% { transform: scale(1.8) rotate(-20deg); opacity: 1; } 100% { transform: scale(2.2) rotate(-20deg); opacity: 0; } }
+        .anim-attacker { animation: attackerLunge 1s forwards; }
+        .anim-victim { animation: victimFall 1s forwards; }
+        .anim-slash { animation: slashEffect 0.5s 0.2s forwards; opacity: 0; }
+        .task-window { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: #d1d5db; border: 8px solid #9ca3af; border-radius: 12px; padding: 20px; color: black; pointer-events: auto; z-index: 150; box-shadow: 0 0 30px rgba(0,0,0,0.8); }
+        .wire-node { width: 36px; height: 36px; border-radius: 50%; cursor: pointer; border: 6px solid #4b5563; position: relative; z-index: 2; transition: transform 0.1s; }
+        .wire-node.active { transform: scale(1.2); box-shadow: 0 0 15px currentColor; }
+    </style>
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+    
+    <div id="lobby-screen" class="overlay">
+        <h1 class="text-6xl md:text-8xl font-black mb-2 text-white tracking-widest drop-shadow-[0_5px_15px_rgba(0,0,0,1)] text-center">AMONG US</h1>
+        <p class="text-2xl mb-8 text-gray-300 font-bold text-red-500 tracking-widest">CANVAS EDITION</p>
+        <div class="bg-gray-800 p-8 rounded-2xl flex flex-col items-center border-4 border-gray-600 w-full max-w-lg shadow-[0_0_40px_rgba(0,0,0,0.8)]">
+            <h2 class="text-2xl font-bold mb-2 text-gray-300 uppercase tracking-widest">Crew Lobby</h2>
+            <p class="text-sm text-gray-400 mb-6 text-center">Controls: WASD, Click/Touch to Move</p>
+            <div id="lobby-players" class="w-full flex flex-wrap justify-center gap-4 mb-8 min-h-[60px]"></div>
+            <button id="start-game-btn" class="w-full py-4 bg-green-600 hover:bg-green-500 border-b-4 border-green-800 active:border-b-0 active:translate-y-1 rounded-xl text-2xl font-black shadow-lg transition-all pointer-events-auto cursor-pointer uppercase tracking-widest text-white">Start Game</button>
+        </div>
+    </div>
+
+    <div id="intro-screen" class="overlay hidden bg-black z-[60]">
+        <h1 id="intro-shhh" class="text-9xl font-bold text-white mb-8 hidden drop-shadow-2xl">SHHH...</h1>
+        <div id="intro-role-container" class="hidden flex flex-col items-center">
+            <h1 id="intro-role-text" class="text-7xl md:text-9xl font-black tracking-widest mb-4"></h1>
+            <p id="intro-role-sub" class="text-2xl md:text-4xl font-semibold"></p>
+        </div>
+    </div>
+
+    <div id="kill-screen" class="overlay hidden bg-black z-[55]">
+        <div class="relative w-full h-full max-w-4xl flex items-center justify-center overflow-hidden">
+            <div id="kill-attacker" class="absolute z-10 w-48 h-56 rounded-t-[90px] rounded-b-3xl border-[10px] border-black shadow-[inset_-15px_-15px_0_rgba(0,0,0,0.3)]">
+                <div class="absolute top-10 left-[-10px] w-36 h-20 bg-blue-200 border-[10px] border-gray-700 rounded-full"></div>
+                <div class="absolute top-12 right-[-40px] w-20 h-36 border-[10px] border-black rounded-r-3xl z-[-1] opacity-80 shadow-lg" style="background: inherit;"></div>
+            </div>
+            <div id="kill-victim" class="absolute z-10 w-48 h-56 rounded-t-[90px] rounded-b-3xl border-[10px] border-black shadow-[inset_-15px_-15px_0_rgba(0,0,0,0.3)]">
+                <div class="absolute top-10 left-[-10px] w-36 h-20 bg-blue-200 border-[10px] border-gray-700 rounded-full"></div>
+            </div>
+            <div id="kill-slash" class="absolute z-20 w-full h-6 bg-white shadow-[0_0_30px_white]"></div>
+        </div>
+    </div>
+
+    <div id="ui-layer" class="hidden">
+        <div id="task-bar-container"><div id="task-bar-fill"></div></div>
+        <div id="joy-base"><div id="joy-knob"></div></div>
+        <div id="action-vent" class="action-btn"><i class="fas fa-sign-in-alt text-2xl"></i></div>
+        <div id="action-report" class="action-btn"><i class="fas fa-bullhorn text-3xl"></i></div>
+        <div id="action-main" class="action-btn">USE</div>
+        <div id="cooldown-indicator" class="hidden absolute bottom-[240px] right-10 text-red-500 font-bold text-xl drop-shadow-md bg-black bg-opacity-80 px-4 py-2 rounded-lg border-2 border-red-900 tracking-wider"></div>
+    </div>
+
+    <!-- Tasks UIs -->
+    <div id="task-download" class="task-window hidden w-80 h-64 flex-col justify-between items-center text-center">
+        <h3 class="text-2xl font-black mb-2 uppercase text-gray-800">Downloading Data</h3>
+        <i class="fas fa-folder-download text-6xl text-blue-600 animate-bounce mt-2"></i>
+        <div class="w-full h-8 bg-gray-800 rounded-md overflow-hidden border-2 border-black mt-4 shadow-inner">
+            <div id="download-progress" class="h-full bg-blue-500 w-0 transition-all duration-100"></div>
+        </div>
+        <button id="btn-download" class="mt-4 px-8 py-3 bg-blue-600 text-white font-bold rounded shadow-lg hover:bg-blue-500 active:bg-blue-700 transition-colors pointer-events-auto">DOWNLOAD</button>
+    </div>
+
+    <div id="task-wires" class="task-window hidden w-[450px] h-[350px] flex-col">
+        <h3 class="text-2xl font-black mb-4 text-center uppercase text-gray-800">Fix Wiring</h3>
+        <div class="relative flex-1 flex justify-between px-6">
+            <svg id="wire-svg" class="absolute top-0 left-0 w-full h-full pointer-events-none z-0"></svg>
+            <div id="wire-left" class="flex flex-col justify-around z-10"></div>
+            <div id="wire-right" class="flex flex-col justify-around z-10"></div>
+        </div>
+        <button onclick="closeTask()" class="absolute top-2 right-4 text-gray-500 font-black text-2xl hover:text-red-600 pointer-events-auto transition-colors">&times;</button>
+    </div>
+
+    <!-- NEW TASK: Swipe -->
+    <div id="task-swipe" class="task-window hidden w-[90%] max-w-[500px] h-[300px] flex-col items-center select-none">
+        <h3 class="text-2xl font-black mb-4 uppercase text-gray-800">Swipe Card</h3>
+        <div id="swipe-msg" class="text-xl mb-4 font-bold text-gray-700">Please swipe card</div>
+        <div class="w-full h-32 bg-gray-700 rounded-xl relative overflow-hidden border-4 border-gray-900 mt-4 shadow-inner">
+            <div class="absolute top-1/2 -translate-y-1/2 left-0 w-full h-4 bg-black"></div>
+            <div id="swipe-card" class="absolute top-4 left-4 w-24 h-24 bg-yellow-400 rounded-lg cursor-grab border-2 border-yellow-600 flex items-center justify-center shadow-lg pointer-events-auto z-10">
+                <div class="w-full h-4 bg-gray-800 absolute bottom-4"></div>
+                <div class="w-8 h-8 rounded-full bg-yellow-200"></div>
+            </div>
+        </div>
+        <button onclick="closeTask()" class="absolute top-2 right-4 text-gray-500 font-black text-2xl hover:text-red-600 pointer-events-auto transition-colors">&times;</button>
+    </div>
+
+    <!-- NEW TASK: Keypad -->
+    <div id="task-keypad" class="task-window hidden w-[350px] h-[480px] flex-col items-center">
+        <h3 class="text-2xl font-black mb-2 uppercase text-gray-800">Enter ID Code</h3>
+        <div class="flex items-center justify-between w-full px-4 mb-4">
+            <div class="text-sm font-bold text-gray-600">CODE:</div>
+            <div id="keypad-target" class="font-mono text-2xl font-black text-blue-700 tracking-widest bg-gray-300 px-4 py-1 rounded border-2 border-gray-400">12345</div>
+        </div>
+        <div id="keypad-display" class="w-full h-16 bg-black text-green-400 font-mono text-4xl flex items-center justify-end px-4 rounded-xl border-4 border-gray-700 mb-4 tracking-widest"></div>
+        <div id="keypad-grid" class="grid grid-cols-3 gap-3 w-full px-2"></div>
+        <button onclick="closeTask()" class="absolute top-2 right-4 text-gray-500 font-black text-2xl hover:text-red-600 pointer-events-auto transition-colors">&times;</button>
+    </div>
+
+    <div id="meeting-screen" class="overlay hidden bg-gray-900 bg-opacity-95 p-4 md:p-8 z-50">
+        <div class="w-full max-w-6xl flex flex-col h-full relative">
+            <div class="text-center shrink-0 mb-4 relative z-10">
+                <button id="toggle-chat-btn" class="absolute top-2 right-2 md:top-0 md:right-0 bg-blue-600 hover:bg-blue-500 border-2 border-blue-400 text-white px-5 py-3 rounded-xl font-bold text-xl shadow-lg transition transform hover:scale-105 pointer-events-auto z-50 flex items-center gap-2" onclick="toggleChat()">
+                    <span class="text-3xl"> 🗣 </span>
+                    <span class="hidden sm:inline">Chat</span>
+                    <div id="chat-badge" class="absolute -top-3 -right-3 bg-red-600 text-white text-sm font-black w-8 h-8 flex items-center justify-center rounded-full border-2 border-gray-900 shadow-lg hidden">0</div>
+                </button>
+                <h2 id="meeting-title" class="text-4xl md:text-5xl font-black mb-2 tracking-widest uppercase mt-4 md:mt-0"></h2>
+                <p id="meeting-subtitle" class="text-xl text-gray-300 font-semibold"></p>
+                <div class="mt-2 text-3xl font-mono bg-black text-red-500 border-2 border-red-500 px-6 py-2 rounded-lg shadow-[0_0_15px_rgba(255,0,0,0.4)] inline-block">
+                    <i class="fas fa-clock mr-2"></i><span id="meeting-timer">0</span>
+                </div>
+            </div>
+            
+            <div class="flex-1 bg-cyan-900 rounded-3xl border-8 border-gray-400 flex flex-col pointer-events-auto shadow-[0_0_50px_rgba(0,0,0,0.8)] overflow-hidden relative w-full">
+                <div class="bg-gray-800 px-6 py-4 font-bold text-gray-200 border-b-4 border-gray-900 tracking-wider flex justify-between items-center text-xl">
+                    <span><i class="fas fa-tablet-alt text-cyan-400 mr-2"></i> WHO IS THE IMPOSTOR?</span>
+                    <span id="meeting-status-text" class="text-yellow-400 font-black">Votes: 0 / 0</span>
+                </div>
+                <div class="flex-1 overflow-y-auto p-6 bg-gray-800">
+                    <div id="players-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
+                </div>
+                <div class="p-6 bg-gray-900 border-t-4 border-gray-700 flex justify-between items-center">
+                    <button id="skip-vote-btn" onclick="submitVote('skip')" class="px-8 py-4 bg-gray-600 hover:bg-gray-500 border-4 border-gray-500 hover:border-white rounded-xl text-2xl font-bold transition-all shadow-md flex items-center gap-3 pointer-events-auto">
+                        <i class="fas fa-forward"></i> Skip Vote
+                    </button>
+                    <div id="skip-badges" class="flex gap-2"></div>
+                </div>
+            </div>
+
+            <div id="chat-modal" class="bg-gray-800 border-l-4 md:border-4 border-gray-600 flex-col shadow-[0_0_30px_rgba(0,0,0,0.9)] hidden pointer-events-auto md:rounded-xl">
+                <div class="bg-blue-900 px-4 py-3 font-bold text-white border-b-2 border-gray-600 tracking-wider flex justify-between items-center text-xl">
+                    <span class="flex items-center gap-2"><span class="text-2xl"> 🗣 </span> Discussion</span>
+                    <button onclick="toggleChat()" class="text-gray-300 hover:text-white text-3xl transition transform hover:scale-110"><i class="fas fa-times-circle"></i></button>
+                </div>
+                <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-gray-900"></div>
+                <div class="p-4 bg-gray-800 border-t-2 border-gray-600 flex gap-2">
+                    <input type="text" id="chat-input" class="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg outline-none placeholder-gray-400 focus:ring-2 focus:ring-blue-500 font-semibold text-lg" placeholder="Type a message..." onkeydown="if(event.key==='Enter') sendMyChat()">
+                    <button id="chat-send-btn" class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-lg font-bold transition-colors shadow-md text-xl" onclick="sendMyChat()">
+                        <i class="fas fa-paper-plane pointer-events-none"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div id="vote-tally-overlay" class="absolute inset-0 bg-black bg-opacity-90 z-40 hidden flex-col justify-center items-center pointer-events-none">
+            <h2 id="vote-results-title" class="text-5xl font-black text-white mb-6 drop-shadow-lg text-center px-4"></h2>
+            <div id="vote-results-subtitle" class="text-2xl text-gray-300 font-semibold mb-12"></div>
+        </div>
+    </div>
+
+    <div id="end-screen" class="overlay hidden bg-black z-[100]">
+        <h1 id="end-title" class="text-7xl md:text-9xl font-black mb-4 tracking-widest drop-shadow-[0_0_30px_rgba(255,255,255,0.5)]"></h1>
+        <p id="end-subtitle" class="text-2xl md:text-4xl mb-12 text-gray-300 font-semibold"></p>
+        <button id="return-lobby-btn" class="px-10 py-5 bg-white text-black hover:bg-gray-300 rounded-xl text-3xl font-black shadow-[0_0_20px_rgba(255,255,255,0.5)] transition-all pointer-events-auto cursor-pointer uppercase">Play Again</button>
+    </div>
+
+    <script>
+        // SCRIPT MISSING
+        // Please provide the javascript code that was at the bottom of the file.
+        // It starts with <script> and ends with </script>.
+        
+        console.error("Game logic missing! Please paste the full code.");
+        
+        // Temporary placeholder to show something renders
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+        ctx.fillStyle = "#111";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#fff";
+        ctx.font = "30px Arial";
+        ctx.fillText("Among Us (Canvas Edition)", 50, 100);
+        ctx.fillStyle = "#f00";
+        ctx.fillText("SCRIPT MISSING - Please update", 50, 150);
+    </script>
+</body>
+</html>
