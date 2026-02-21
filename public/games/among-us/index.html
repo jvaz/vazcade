@@ -7,8 +7,7 @@
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
 <style>
-body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: 'Segoe UI',
-Tahoma, Geneva, Verdana, sans-serif; touch-action: none; color: white; user-select: none; -webkit-user-select: none; }
+body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; touch-action: none; color: white; user-select: none; -webkit-user-select: none; }
 #game-canvas { display: block; width: 100%; height: 100%; outline: none; }
 input[type="text"] { user-select: auto !important; -webkit-user-select: auto !important; pointer-events: auto !important; touch-action:
 auto !important; cursor: text !important; }
@@ -61,8 +60,7 @@ center; gap: 15px; z-index: 20; backdrop-filter: blur(2px); pointer-events: auto
 .anim-slide-right { animation: slideInRight 0.4s ease-out forwards; }
 @keyframes attackerLunge { 0% { transform: translateX(-150px) rotate(-15deg); opacity: 0; } 50% { transform: translateX(0px)
 rotate(10deg); opacity: 1; } 100% { transform: translateX(30px) rotate(15deg); opacity: 1; } }
-@keyframes victimFall { 0% { transform: translateX(150px); opacity: 0; } 50% { transform: translateX(0px); opacity: 1; } 100% {
-transform: translateX(0px) translateY(80px) rotate(45deg); opacity: 0; } }
+@keyframes victimFall { 0% { transform: translateX(150px); opacity: 0; } 50% { transform: translateX(0px); opacity: 1; } 100% {transform: translateX(0px) translateY(80px) rotate(45deg); opacity: 0; } }
 @keyframes slashEffect { 0% { transform: scale(0) rotate(-20deg); opacity: 1; } 50% { transform: scale(1.8) rotate(-20deg); opacity:
 1; } 100% { transform: scale(2.2) rotate(-20deg); opacity: 0; } }
 .anim-attacker { animation: attackerLunge 1s forwards; }
@@ -193,8 +191,7 @@ justify-center rounded-full border-2 border-gray-900 shadow-lg hidden">0</div>
 <div id="players-grid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
 </div>
 <div class="p-6 bg-gray-900 border-t-4 border-gray-700 flex justify-between items-center">
-<button id="skip-vote-btn" onclick="submitVote('skip')" class="px-8 py-4 bg-gray-600 hover:bg-gray-500 border-4 border-gray-
-500 hover:border-white rounded-xl text-2xl font-bold transition-all shadow-md flex items-center gap-3 pointer-events-auto">
+<button id="skip-vote-btn" onclick="submitVote('skip')" class="px-8 py-4 bg-gray-600 hover:bg-gray-500 border-4 border-gray-500 hover:border-white rounded-xl text-2xl font-bold transition-all shadow-md flex items-center gap-3 pointer-events-auto">
 <i class="fas fa-forward"></i> Skip Vote
 </button>
 <div id="skip-badges" class="flex gap-2"></div>
@@ -209,8 +206,7 @@ class="fas fa-times-circle"></i></button>
 </div>
 <div id="chat-messages" class="flex-1 overflow-y-auto p-4 flex flex-col gap-3 bg-gray-900"></div>
 <div class="p-4 bg-gray-800 border-t-2 border-gray-600 flex gap-2">
-<input type="text" id="chat-input" class="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg outline-none placeholder-gray-
-400 focus:ring-2 focus:ring-blue-500 font-semibold text-lg" placeholder="Type a message..." onkeydown="if(event.key==='Enter')
+<input type="text" id="chat-input" class="flex-1 bg-gray-700 text-white px-4 py-3 rounded-lg outline-none placeholder-gray-400 focus:ring-2 focus:ring-blue-500 font-semibold text-lg" placeholder="Type a message..." onkeydown="if(event.key==='Enter')
 sendMyChat()">
 <button id="chat-send-btn" class="bg-blue-600 hover:bg-blue-500 px-6 py-3 rounded-lg font-bold transition-colors shadow-md text-xl" onclick="sendMyChat()">
 <i class="fas fa-paper-plane pointer-events-none"></i>
@@ -234,8 +230,7 @@ sendMyChat()">
 </div>
 <canvas id="game-canvas"></canvas>
 <script>
-if (!CanvasRenderingContext2D.prototype.roundRect) { CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r) {
-r=Math.min(r,w/2,h/2); this.moveTo(x+r,y); this.arcTo(x+w,y,x+w,y+h,r); this.arcTo(x+w,y+h,x,y+h,r); this.arcTo(x,y+h,x,y,r);
+if (!CanvasRenderingContext2D.prototype.roundRect) { CanvasRenderingContext2D.prototype.roundRect = function(x,y,w,h,r) {r=Math.min(r,w/2,h/2); this.moveTo(x+r,y); this.arcTo(x+w,y,x+w,y+h,r); this.arcTo(x+w,y+h,x,y+h,r); this.arcTo(x,y+h,x,y,r);
 this.arcTo(x,y,x+w,y,r); return this; }; }
 const canvas = document.getElementById('game-canvas'); const ctx = canvas.getContext('2d');
 const COLORS = ['#c51111','#132ed1','#117f2d','#ed54ba','#ef7d0d','#f5f557','#3f474e','#d6e0f0','#6b2fbb','#71491e'];
@@ -247,33 +242,17 @@ const KILL_COOLDOWN = 15; const MEETING_TIME = 45;
 const INITIAL_KILL_COOLDOWN = 10;
 const MAP_WIDTH = 2400; const MAP_HEIGHT = 2400;
 const rooms = [
-{ id:'cafe', name:'CAFETERIA', x:800, y:800, w:800, h:600, color:'#475569' },
-{ id:'admin', name:'ADMIN', x:1300, y:1500, w:400, h:400, color:'#334155' },
-{ id:'med', name:'MEDBAY', x:300, y:800, w:400, h:400, color:'#e0f2fe' },
-{ id:'elec', name:'ELECTRICAL', x:300, y:1400, w:500, h:500, color:'#fef08a' },
-{ id:'weap', name:'WEAPONS', x:1700, y:500, w:500, h:400, color:'#7f1d1d' },
-{ id:'sec', name:'SECURITY', x:300, y:2000, w:400, h:300, color:'#1e293b' },
-{ id:'o2', name:'O2', x:1800, y:1100, w:400, h:300, color:'#bbf7d0' },
-{ id:'nav', name:'NAVIGATION', x:1800, y:1600, w:400, h:500, color:'#a78bfa' },
-{ id:'store', name:'STORAGE', x:900, y:1600, w:300, h:600, color:'#9ca3af' }
+{ id:'cafe', name:'CAFETERIA', x:800, y:800, w:800, h:600, color:'#475569' }, { id:'admin', name:'ADMIN', x:1300, y:1500, w:400, h:400, color:'#334155' }, { id:'med', name:'MEDBAY', x:300, y:800, w:400, h:400, color:'#e0f2fe' }, { id:'elec', name:'ELECTRICAL', x:300, y:1400, w:500, h:500, color:'#fef08a' }, { id:'weap', name:'WEAPONS', x:1700, y:500, w:500, h:400, color:'#7f1d1d' }, { id:'sec', name:'SECURITY', x:300, y:2000, w:400, h:300, color:'#1e293b' }, { id:'o2', name:'O2', x:1800, y:1100, w:400, h:300, color:'#bbf7d0' }, { id:'nav', name:'NAVIGATION', x:1800, y:1600, w:400, h:500, color:'#a78bfa' }, { id:'store', name:'STORAGE', x:900, y:1600, w:300, h:600, color:'#9ca3af' }
 ];
 const corridors = [
-{ x:700, y:900, w:100, h:200 }, { x:1600, y:700, w:100, h:300 }, { x:1100, y:1400, w:200, h:200 },
-{ x:800, y:1400, w:100, h:200 }, { x:1600, y:1150, w:200, h:100 }, { x:1600, y:1650, w:200, h:100 },
-{ x:700, y:2050, w:200, h:100 }, { x:1200, y:1900, w:600, h:100 }, { x:1200, y:1600, w:100, h:300 }
+{ x:700, y:900, w:100, h:200 }, { x:1600, y:700, w:100, h:300 }, { x:1100, y:1400, w:200, h:200 }, { x:800, y:1400, w:100, h:200 }, { x:1600, y:1150, w:200, h:100 }, { x:1600, y:1650, w:200, h:100 }, { x:700, y:2050, w:200, h:100 }, { x:1200, y:1900, w:600, h:100 }, { x:1200, y:1600, w:100, h:300 }
 ];
 const taskLocs = [
-{ id:'t1', x:1200, y:900, type:'wires' }, { id:'t2', x:1500, y:1700, type:'download' },
-{ id:'t3', x:500, y:900, type:'wires' }, { id:'t4', x:550, y:1600, type:'download' },
-{ id:'t5', x:2000, y:700, type:'wires' }, { id:'t6', x:1900, y:1250, type:'download' },
-{ id:'t7', x:2000, y:1900, type:'wires' }, { id:'t8', x:1050, y:2000, type:'download' },
-{ id:'t9', x:500, y:2150, type:'wires' }, { id:'t10', x:1550, y:1550, type:'swipe' },
-{ id:'t11', x:1900, y:1150, type:'keypad' }, { id:'t12', x:400, y:1500, type:'keypad' }
+{ id:'t1', x:1200, y:900, type:'wires' }, { id:'t2', x:1500, y:1700, type:'download' }, { id:'t3', x:500, y:900, type:'wires' }, { id:'t4', x:550, y:1600, type:'download' }, { id:'t5', x:2000, y:700, type:'wires' }, { id:'t6', x:1900, y:1250, type:'download' }, { id:'t7', x:2000, y:1900, type:'wires' }, { id:'t8', x:1050, y:2000, type:'download' }, { id:'t9', x:500, y:2150, type:'wires' }, { id:'t10', x:1550, y:1550, type:'swipe' }, { id:'t11', x:1900, y:1150, type:'keypad' }, { id:'t12', x:400, y:1500, type:'keypad' }
 ];
 const vents = [
 { id: 0, x: 950, y: 900, next: 1 }, // Cafe left
-{ id: 1, x: 1350, y: 1650, next: 2 }, // Admin
-{ id: 2, x: 1850, y: 1750, next: 0 }, // Nav
+{ id: 1, x: 1350, y: 1650, next: 2 }, // Admin { id: 2, x: 1850, y: 1750, next: 0 }, // Nav
 { id: 3, x: 450, y: 950, next: 4 }, // Medbay
 { id: 4, x: 450, y: 1450, next: 5 }, // Elec
 { id: 5, x: 450, y: 2150, next: 3 } // Sec
@@ -292,8 +271,7 @@ let joyActive = false; let joyCenter = { x: 0, y: 0 }; const joyMaxRadius = 40;
 
 
 
-function startJoy(e) {
-e.preventDefault(); e.stopPropagation(); joyActive = true; clickTarget = null;
+function startJoy(e) {e.preventDefault(); e.stopPropagation(); joyActive = true; clickTarget = null;
 let rect = joyBase.getBoundingClientRect(); joyCenter = { x: rect.left + rect.width/2, y: rect.top + rect.height/2 };
 updateJoyKnob(e.touches ? e.touches[0].clientX : e.clientX, e.touches ? e.touches[0].clientY : e.clientY);
 }
@@ -301,8 +279,7 @@ function moveJoy(e) { if (!joyActive) return; e.preventDefault(); e.stopPropagat
 e.touches[0].clientX : e.clientX, e.touches ? e.touches[0].clientY : e.clientY); }
 function endJoy(e) { if (!joyActive) return; joyActive = false; joystick.active = false; joystick.dx = 0; joystick.dy = 0;
 joyKnob.style.transform = `translate(0px, 0px)`; }
-function updateJoyKnob(cx, cy) {
-let dx = cx - joyCenter.x; let dy = cy - joyCenter.y; let dist = Math.hypot(dx, dy);
+function updateJoyKnob(cx, cy) {let dx = cx - joyCenter.x; let dy = cy - joyCenter.y; let dist = Math.hypot(dx, dy);
 if (dist > joyMaxRadius) { dx = (dx / dist) * joyMaxRadius; dy = (dy / dist) * joyMaxRadius; }
 joyKnob.style.transform = `translate(${dx}px, ${dy}px)`; joystick.active = true; joystick.dx = dx / joyMaxRadius; joystick.dy = dy /
 joyMaxRadius;
@@ -314,41 +291,31 @@ false});
 document.addEventListener('touchend', endJoy, {passive: false}); document.addEventListener('touchcancel', endJoy, {passive:
 false});
 const shuffle = (arr) => arr.sort(() => Math.random() - 0.5);
-const darken = (c, p) => { let n = parseInt(c.replace("#",""),16), a = Math.round(2.55 * p), R = (n>>16)-a, B = (n>>8&0x00FF)-a, G =
-(n&0x0000FF)-a; return "#"+(0x1000000+(R<255?R<1?0:R:255)*0x10000+(B<255?B<1?0:B:255)*0x100+(G<255?G<1?0:G:255)
+const darken = (c, p) => { let n = parseInt(c.replace("#",""),16), a = Math.round(2.55 * p), R = (n>>16)-a, B = (n>>8&0x00FF)-a, G = (n&0x0000FF)-a; return "#"+(0x1000000+(R<255?R<1?0:R:255)*0x10000+(B<255?B<1?0:B:255)*0x100+(G<255?G<1?0:G:255)
 ).toString(16).slice(1); };
-function initGame() {
-players = {}; bodies = {}; votes = {};
+function initGame() {players = {}; bodies = {}; votes = {};
 botTimers.forEach(t => clearTimeout(t)); botTimers = []; clearInterval(meetingInterval);
 players[myId] = { id: myId, name: 'You', isBot: false, color: COLORS[0], x: 1200, y: 1200, isAlive: true, isImpostor: false, facingRight:
 true, killCD: INITIAL_KILL_COOLDOWN, walkTime: 0, inVent: false, ventId: null };
 let cols = shuffle([...COLORS.slice(1)]); let nms = shuffle([...BOT_NAMES]);
-for(let i=0; i<7; i++) {
-let id = 'bot_'+i;
-players[id] = { id, name: nms[i], isBot: true, color: cols[i], x: 1200+(Math.random()*100-50), y: 1200+(Math.random()*100-50),
-isAlive: true, isImpostor: false, facingRight: true, killCD: INITIAL_KILL_COOLDOWN, state: 'IDLE', target: null, timer: Math.random()*2,
-stuckFrames:0, lastPos:{x:0,y:0}, walkTime: 0, inVent: false };
+for(let i=0; i<7; i++) {let id = 'bot_'+i;
+players[id] = { id, name: nms[i], isBot: true, color: cols[i], x: 1200+(Math.random()*100-50), y: 1200+(Math.random()*100-50), isAlive: true, isImpostor: false, facingRight: true, killCD: INITIAL_KILL_COOLDOWN, state: 'IDLE', target: null, timer: Math.random()*2, stuckFrames:0, lastPos:{x:0,y:0}, walkTime: 0, inVent: false };
 }
 updateLobbyUI();
 }
-function updateLobbyUI() {
-const c = document.getElementById('lobby-players'); c.innerHTML = '';
-for (let id in players) {
-const p = players[id]; const d = document.createElement('div');
+function updateLobbyUI() {const c = document.getElementById('lobby-players'); c.innerHTML = '';
+for (let id in players) {const p = players[id]; const d = document.createElement('div');
 d.className = `w-16 h-16 rounded-full border-4 ${p.isBot?'border-gray-500':'border-white'} flex items-center justify-center font-bold text-sm shadow-xl relative overflow-hidden`;
 d.style.backgroundColor = p.color; d.innerHTML = `<div class="absolute inset-0 bg-black opacity-10"></div><span
 class="relative z-10 drop-shadow-md">${p.name}</span>`; c.appendChild(d);
 }
 }
-function changeState(st) {
-gameState.status = st;
+function changeState(st) {gameState.status = st;
 ['lobby-screen','intro-screen','kill-screen','ui-layer','meeting-screen','end-screen','task-download','task-wires', 'task-swipe', 'task-keypad'].forEach(id => document.getElementById(id).classList.add('hidden'));
 if(st==='lobby') { document.getElementById('lobby-screen').classList.remove('hidden'); initGame(); }
 else if(st==='intro') { playIntroSequence(); }
-else if(st==='playing') {
-document.getElementById('ui-layer').classList.remove('hidden');
-updateTaskBar(); keys = {w:false, a:false, s:false, d:false, space:false}; clickTarget = null; actionState = {type:'NONE', target:null,
-reportTarget:null, ventTarget:null};
+else if(st==='playing') {document.getElementById('ui-layer').classList.remove('hidden');
+updateTaskBar(); keys = {w:false, a:false, s:false, d:false, space:false}; clickTarget = null; actionState = {type:'NONE', target:null, reportTarget:null, ventTarget:null};
 joyActive = false; joystick.active = false; joystick.dx = 0; joystick.dy = 0; joyKnob.style.transform = `translate(0px, 0px)`;
 }
 else if(st==='meeting') { document.getElementById('meeting-screen').classList.remove('hidden'); showMeetingScreen(); }
@@ -358,44 +325,35 @@ else if(st==='meeting') { document.getElementById('meeting-screen').classList.re
 else if(st==='gameover') { document.getElementById('end-screen').classList.remove('hidden'); }
 }
 document.getElementById('start-game-btn').addEventListener('mousedown', (e)=>{e.preventDefault(); handleStart();});
-document.getElementById('start-game-btn').addEventListener('touchstart', (e)=>{e.preventDefault(); handleStart();},
-{passive:false});
-function handleStart() {
-if(gameState.status !== 'lobby') return;
+document.getElementById('start-game-btn').addEventListener('touchstart', (e)=>{e.preventDefault(); handleStart();}, {passive:false});
+function handleStart() {if(gameState.status !== 'lobby') return;
 const pIds = Object.keys(players);
 const impId = pIds[Math.floor(Math.random() * pIds.length)];
-for (let id in players) {
-players[id].isImpostor = (id === impId); players[id].isAlive = true; players[id].killCD = INITIAL_KILL_COOLDOWN;
+for (let id in players) {players[id].isImpostor = (id === impId); players[id].isAlive = true; players[id].killCD = INITIAL_KILL_COOLDOWN;
 players[id].walkTime = 0;
 players[id].x = 1200 + (Math.random()*200-100); players[id].y = 1100 + (Math.random()*200-100);
 }
 gameState.totalTasks = (pIds.length - 1) * 5; gameState.completedTasks = 0; myTasks = [];
-if (!players[myId].isImpostor) {
-let avail = shuffle([...taskLocs]);
+if (!players[myId].isImpostor) {let avail = shuffle([...taskLocs]);
 for(let i=0; i<5; i++) myTasks.push({ ...avail[i], completed: false });
 }
 changeState('intro');
 }
-function playIntroSequence() {
-const sc = document.getElementById('intro-screen'); sc.classList.remove('hidden');
+function playIntroSequence() {const sc = document.getElementById('intro-screen'); sc.classList.remove('hidden');
 const sh = document.getElementById('intro-shhh'); const cont = document.getElementById('intro-role-container');
 const txt = document.getElementById('intro-role-text'); const sub = document.getElementById('intro-role-sub');
 sh.classList.remove('hidden'); sh.classList.add('shhh-anim'); cont.classList.add('hidden');
-setTimeout(() => {
-sh.classList.add('hidden'); sh.classList.remove('shhh-anim');
+setTimeout(() => {sh.classList.add('hidden'); sh.classList.remove('shhh-anim');
 cont.classList.remove('hidden'); cont.classList.add('anim-pop');
-if(players[myId].isImpostor) {
-txt.innerText = "IMPOSTOR"; txt.className = "text-7xl md:text-9xl font-black tracking-widest mb-4 text-red-600 drop-shadow-[0_0_30px_red]";
+if(players[myId].isImpostor) {txt.innerText = "IMPOSTOR"; txt.className = "text-7xl md:text-9xl font-black tracking-widest mb-4 text-red-600 drop-shadow-[0_0_30px_red]";
 sub.innerText = "Kill the crewmates."; sub.className = "text-2xl md:text-4xl font-semibold text-red-400";
-} else {
-txt.innerText = "CREWMATE"; txt.className = "text-7xl md:text-9xl font-black tracking-widest mb-4 text-cyan-400 drop-shadow-[0_0_30px_cyan]";
+} else {txt.innerText = "CREWMATE"; txt.className = "text-7xl md:text-9xl font-black tracking-widest mb-4 text-cyan-400 drop-shadow-[0_0_30px_cyan]";
 sub.innerText = "Complete tasks to win."; sub.className = "text-2xl md:text-4xl font-semibold text-blue-200";
 }
 }, 2000);
 setTimeout(() => { cont.classList.remove('anim-pop'); changeState('playing'); }, 5500);
 }
-function playKillAnimation(attacker, victim) {
-changeState('killAnim');
+function playKillAnimation(attacker, victim) {changeState('killAnim');
 const sc = document.getElementById('kill-screen'); sc.classList.remove('hidden');
 const attDiv = document.getElementById('kill-attacker'); const vicDiv = document.getElementById('kill-victim');
 const slashDiv = document.getElementById('kill-slash');
@@ -406,8 +364,7 @@ attDiv.classList.add('anim-attacker'); vicDiv.classList.add('anim-victim'); slas
 setTimeout(() => { sc.classList.add('hidden'); changeState('playing'); }, 2000);
 }
 function startGameLoop() { resizeCanvas(); lastTime = performance.now(); requestAnimationFrame(gameLoop); }
-function gameLoop(time) {
-if(canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) resizeCanvas();
+function gameLoop(time) {if(canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) resizeCanvas();
 const dt = Math.max(0, Math.min((time - lastTime) / 1000, 0.1)); lastTime = time;
 if (gameState.status === 'playing') { updateLogic(dt); updateActionState(); checkWin(); }
 if (['playing', 'lobby', 'meeting', 'intro', 'killAnim'].includes(gameState.status)) render();
@@ -416,54 +373,42 @@ requestAnimationFrame(gameLoop);
 
 
 }
-function updateLogic(dt) {
-for (let id in players) { let p = players[id]; if (!p.isBot) updateLocal(p, dt); else updateBot(p, dt); }
+function updateLogic(dt) {for (let id in players) { let p = players[id]; if (!p.isBot) updateLocal(p, dt); else updateBot(p, dt); }
 }
-function updateLocal(p, dt) {
-if (p.killCD > 0) p.killCD -= dt;
+function updateLocal(p, dt) {if (p.killCD > 0) p.killCD -= dt;
 if (p.inVent) { p.walkTime = 0; clickTarget = null; return; } // No walking in vents
 let dx=0, dy=0; let spd = p.isAlive ? 1 : 1.3;
 if(keys.w) dy-=1; if(keys.s) dy+=1; if(keys.a) dx-=1; if(keys.d) dx+=1;
 if(keys.w || keys.a || keys.s || keys.d || joystick.active) clickTarget = null;
 if(joystick.active && (joystick.dx !== 0 || joystick.dy !== 0)) { dx = joystick.dx; dy = joystick.dy; }
-if (clickTarget) {
-let tx = clickTarget.x - p.x; let ty = clickTarget.y - p.y; let dist = Math.hypot(tx, ty);
+if (clickTarget) {let tx = clickTarget.x - p.x; let ty = clickTarget.y - p.y; let dist = Math.hypot(tx, ty);
 if (dist > 15) { dx = tx / dist; dy = ty / dist; } else { clickTarget = null; }
 }
 let mag = Math.hypot(dx,dy);
-if(mag>0) {
-dx=(dx/mag)*PLAYER_SPEED*spd*dt; dy=(dy/mag)*PLAYER_SPEED*spd*dt;
+if(mag>0) {dx=(dx/mag)*PLAYER_SPEED*spd*dt; dy=(dy/mag)*PLAYER_SPEED*spd*dt;
 p.facingRight = dx>0.1 ? true : (dx<-0.1 ? false : p.facingRight); move(p, dx, dy, !p.isAlive);
 p.walkTime = ((p.walkTime || 0) + dt * 15) % (Math.PI * 2);
 } else p.walkTime = 0;
 }
-function updateBot(b, dt) {
-if (!b.isAlive) { b.walkTime = 0; return; }
+function updateBot(b, dt) {if (!b.isAlive) { b.walkTime = 0; return; }
 if (b.killCD > 0) b.killCD -= dt;
 // BOTS ONLY REPORT IF THEY ARE CREWMATES (Fixes the "too easy" issue)
-if (!b.isImpostor && Math.random()<0.1) {
-for(let id in bodies) { if(Math.hypot(b.x-bodies[id].x, b.y-bodies[id].y) < REPORT_RANGE) { triggerMeeting(b.id, bodies[id].color);
+if (!b.isImpostor && Math.random()<0.1) {for(let id in bodies) { if(Math.hypot(b.x-bodies[id].x, b.y-bodies[id].y) < REPORT_RANGE) { triggerMeeting(b.id, bodies[id].color);
 return; } }
 }
-if (b.isImpostor && b.killCD <= 0) {
-let tgt = null, minD = KILL_RANGE;
+if (b.isImpostor && b.killCD <= 0) {let tgt = null, minD = KILL_RANGE;
 for(let t in players) { let p = players[t]; if(p.id!==b.id && p.isAlive && !p.isImpostor) { let d = Math.hypot(b.x-p.x, b.y-p.y);
 if(d<minD) { minD=d; tgt=p; } } }
 if (tgt) { executeKill(b, tgt); return; }
 }
-if (b.state === 'IDLE') {
-b.walkTime = 0; b.timer -= dt;
-if (b.timer <= 0) {
-b.state = 'MOVE'; let tps = [...rooms, ...taskLocs]; let t = tps[Math.floor(Math.random()*tps.length)];
+if (b.state === 'IDLE') {b.walkTime = 0; b.timer -= dt;
+if (b.timer <= 0) {b.state = 'MOVE'; let tps = [...rooms, ...taskLocs]; let t = tps[Math.floor(Math.random()*tps.length)];
 b.target = { x: t.x + (t.w?t.w/2:0) + (Math.random()*200-100), y: t.y + (t.h?t.h/2:0) + (Math.random()*200-100) };
 }
-} else if (b.state === 'MOVE') {
-let dx = b.target.x - b.x, dy = b.target.y - b.y, d = Math.hypot(dx,dy);
-if (d < 20) {
-b.state = 'IDLE'; b.timer = Math.random()*4+1; b.walkTime = 0;
+} else if (b.state === 'MOVE') {let dx = b.target.x - b.x, dy = b.target.y - b.y, d = Math.hypot(dx,dy);
+if (d < 20) {b.state = 'IDLE'; b.timer = Math.random()*4+1; b.walkTime = 0;
 if(!b.isImpostor && Math.random()<0.5) { gameState.completedTasks++; updateTaskBar(); }
-} else {
-let mx = (dx/d)*BOT_SPEED*dt, my = (dy/d)*BOT_SPEED*dt;
+} else {let mx = (dx/d)*BOT_SPEED*dt, my = (dy/d)*BOT_SPEED*dt;
 b.facingRight = mx>0; move(b, mx, my, false);
 b.walkTime = ((b.walkTime || 0) + dt * 15) % (Math.PI * 2);
 if (Math.hypot(b.x-b.lastPos.x, b.y-b.lastPos.y) < 0.5) b.stuckFrames++; else b.stuckFrames=0;
@@ -471,39 +416,30 @@ b.lastPos = {x:b.x, y:b.y}; if(b.stuckFrames > 20) { b.state='IDLE'; b.timer=0; 
 }
 }
 }
-function isPointInMap(x, y) {
-for(let r of [...rooms, ...corridors]) { if(x >= r.x && x <= r.x+r.w && y >= r.y && y <= r.y+r.h) return true; }
+function isPointInMap(x, y) {for(let r of [...rooms, ...corridors]) { if(x >= r.x && x <= r.x+r.w && y >= r.y && y <= r.y+r.h) return true; }
 return false;
 }
 
 
 
-function move(ent, dx, dy, isGhost) {
-const margin = 15; if (isGhost) { ent.x+=dx; ent.y+=dy; return; }
+function move(ent, dx, dy, isGhost) {const margin = 15; if (isGhost) { ent.x+=dx; ent.y+=dy; return; }
 if (isPointInMap(ent.x + dx, ent.y + dy)) { ent.x += dx; ent.y += dy; return; }
 if (isPointInMap(ent.x + dx, ent.y)) { ent.x += dx; }
 else if (isPointInMap(ent.x, ent.y + dy)) { ent.y += dy; }
-ent.x = Math.max(margin, Math.min(MAP_WIDTH-margin, ent.x)); ent.y = Math.max(margin, Math.min(MAP_HEIGHT-margin,
-ent.y));
+ent.x = Math.max(margin, Math.min(MAP_WIDTH-margin, ent.x)); ent.y = Math.max(margin, Math.min(MAP_HEIGHT-margin, ent.y));
 }
-function updateActionState() {
-const m = players[myId]; if(!m.isAlive) { setAction('NONE'); return; }
+function updateActionState() {const m = players[myId]; if(!m.isAlive) { setAction('NONE'); return; }
 let st = 'NONE', tgt = null, repTgt = null, ventTgt = null, minD = Infinity, minDRep = Infinity, minDVent = Infinity;
 for(let id in bodies) { let d=Math.hypot(m.x-bodies[id].x, m.y-bodies[id].y); if(d<REPORT_RANGE&&d<minDRep)
 {repTgt=bodies[id]; minDRep=d;} }
 if(Math.hypot(m.x-emergencyButton.x, m.y-emergencyButton.y) < USE_RANGE && !m.inVent) {st='EMERGENCY';}
-if(m.isImpostor) {
-if(m.inVent) {
-ventTgt = vents.find(v => v.id === m.ventId); // Always have current vent target when inside to allow exit
-} else {
-for(let v of vents) { let d=Math.hypot(m.x-v.x, m.y-v.y); if(d<USE_RANGE&&d<minDVent) { ventTgt=v; minDVent=d; } }
-if(st==='NONE' && m.killCD<=0) {
-for(let id in players) { let p=players[id]; if(p.id!==myId && p.isAlive && !p.isImpostor) { let d=Math.hypot(m.x-p.x, m.y-p.y);
+if(m.isImpostor) {if(m.inVent) {ventTgt = vents.find(v => v.id === m.ventId); // Always have current vent target when inside to allow exit
+} else {for(let v of vents) { let d=Math.hypot(m.x-v.x, m.y-v.y); if(d<USE_RANGE&&d<minDVent) { ventTgt=v; minDVent=d; } }
+if(st==='NONE' && m.killCD<=0) {for(let id in players) { let p=players[id]; if(p.id!==myId && p.isAlive && !p.isImpostor) { let d=Math.hypot(m.x-p.x, m.y-p.y);
 if(d<KILL_RANGE&&d<minD) {st='KILL';tgt=p;minD=d;} } }
 }
 }
-} else if(st==='NONE') {
-for(let t of myTasks) { if(!t.completed) { let d=Math.hypot(m.x-t.x, m.y-t.y); if(d<USE_RANGE&&d<minD)
+} else if(st==='NONE') {for(let t of myTasks) { if(!t.completed) { let d=Math.hypot(m.x-t.x, m.y-t.y); if(d<USE_RANGE&&d<minD)
 {st='USE';tgt=t;minD=d;} } }
 }
 setAction(st, tgt, repTgt, ventTgt);
@@ -511,39 +447,33 @@ const ui = document.getElementById('cooldown-indicator');
 if (m.isImpostor && m.isAlive) { ui.classList.remove('hidden'); ui.innerText = m.killCD>0 ? `KILL: ${Math.ceil(m.killCD)}s` : "KILL
 READY"; } else ui.classList.add('hidden');
 }
-function setAction(st, tgt, repTgt, ventTgt) {
-actionState = {type:st, target:tgt, reportTarget:repTgt, ventTarget: ventTgt};
+function setAction(st, tgt, repTgt, ventTgt) {actionState = {type:st, target:tgt, reportTarget:repTgt, ventTarget: ventTgt};
 const btnMain = document.getElementById('action-main'); const btnRep = document.getElementById('action-report'); const btnVent = document.getElementById('action-vent');
 if (repTgt) { btnRep.classList.add('active'); } else { btnRep.classList.remove('active'); }
-if (players[myId].isImpostor) {
-btnVent.classList.remove('hidden');
+if (players[myId].isImpostor) {btnVent.classList.remove('hidden');
 if (ventTgt) { btnVent.classList.add('active'); btnVent.innerHTML = players[myId].inVent ? '<i class="fas fa-sign-out-alt text-2xl">
 </i>' : '<i class="fas fa-sign-in-alt text-2xl"></i>'; }
 else { btnVent.classList.remove('active'); }
 } else { btnVent.classList.add('hidden'); }
 if (st==='NONE') { btnMain.style.opacity='0.5'; btnMain.innerText=players[myId].isImpostor?'KILL':'USE';
 btnMain.style.borderColor='rgba(255,255,255,0.3)'; btnMain.style.color='#fff'; }
-else { btnMain.style.opacity='1'; btnMain.innerText=st; btnMain.style.borderColor = (st==='KILL')?'#ef4444':((st==
-='EMERGENCY')?'#facc15':'#fff'); btnMain.style.color = btnMain.style.borderColor; }
+else { btnMain.style.opacity='1'; btnMain.innerText=st; btnMain.style.borderColor = (st==='KILL')?'#ef4444':((st== ='EMERGENCY')?'#facc15':'#fff'); btnMain.style.color = btnMain.style.borderColor; }
 }
-const handleActionMain = (e) => {
-if(e) { e.preventDefault(); e.stopPropagation(); }
+const handleActionMain = (e) => {if(e) { e.preventDefault(); e.stopPropagation(); }
 const m=players[myId]; if(gameState.status!=='playing' || !m.isAlive || actionState.type==='NONE') return;
 const t = actionState.target;
 if(actionState.type==='KILL') executeKill(m, t);
 else if(actionState.type==='EMERGENCY') triggerMeeting(myId, null);
 else if(actionState.type==='USE') openTask(t);
 };
-const handleActionReport = (e) => {
-if(e) { e.preventDefault(); e.stopPropagation(); }
+const handleActionReport = (e) => {if(e) { e.preventDefault(); e.stopPropagation(); }
 
 
 
 const m=players[myId]; if(gameState.status!=='playing' || !m.isAlive || !actionState.reportTarget) return;
 triggerMeeting(myId, actionState.reportTarget.color);
 };
-const handleActionVent = (e) => {
-if(e) { e.preventDefault(); e.stopPropagation(); }
+const handleActionVent = (e) => {if(e) { e.preventDefault(); e.stopPropagation(); }
 const m=players[myId]; if(gameState.status!=='playing' || !m.isAlive || !m.isImpostor || !actionState.ventTarget) return;
 if (m.inVent) { m.inVent = false; m.ventId = null; }
 else { m.inVent = true; m.ventId = actionState.ventTarget.id; m.x = actionState.ventTarget.x; m.y = actionState.ventTarget.y; }
@@ -553,8 +483,7 @@ document.getElementById('action-main').addEventListener('mousedown', handleActio
 document.getElementById('action-report').addEventListener('mousedown', handleActionReport); document.getElementById('
 action-report').addEventListener('touchstart', handleActionReport, {passive: false});
 document.getElementById('action-vent').addEventListener('mousedown', handleActionVent); document.getElementById('action-vent').addEventListener('touchstart', handleActionVent, {passive: false});
-document.addEventListener('keydown', e => {
-if (e.target && e.target.tagName.toLowerCase() === 'input') return;
+document.addEventListener('keydown', e => {if (e.target && e.target.tagName.toLowerCase() === 'input') return;
 if (e.code === 'Space') { e.preventDefault(); handleActionMain(); }
 if (e.code === 'KeyR' && actionState.reportTarget) handleActionReport();
 const k = e.key ? e.key.toLowerCase() : ''; const c = e.code ? e.code : '';
@@ -563,16 +492,14 @@ if(k==='s' || c==='KeyS' || c==='ArrowDown') keys.s=true;
 if(k==='a' || c==='KeyA' || c==='ArrowLeft') keys.a=true;
 if(k==='d' || c==='KeyD' || c==='ArrowRight') keys.d=true;
 });
-document.addEventListener('keyup', e => {
-if (e.target && e.target.tagName.toLowerCase() === 'input') return;
+document.addEventListener('keyup', e => {if (e.target && e.target.tagName.toLowerCase() === 'input') return;
 const k = e.key ? e.key.toLowerCase() : ''; const c = e.code ? e.code : '';
 if(k==='w' || c==='KeyW' || c==='ArrowUp') keys.w=false;
 if(k==='s' || c==='KeyS' || c==='ArrowDown') keys.s=false;
 if(k==='a' || c==='KeyA' || c==='ArrowLeft') keys.a=false;
 if(k==='d' || c==='KeyD' || c==='ArrowRight') keys.d=false;
 });
-function executeKill(attacker, victim) {
-attacker.killCD = KILL_COOLDOWN; attacker.x = victim.x; attacker.y = victim.y;
+function executeKill(attacker, victim) {attacker.killCD = KILL_COOLDOWN; attacker.x = victim.x; attacker.y = victim.y;
 victim.isAlive = false; bodies[victim.id] = { x:victim.x, y:victim.y, color:victim.color };
 if (victim.id === myId) closeTask();
 if (attacker.id === myId || victim.id === myId) playKillAnimation(attacker, victim);
@@ -580,25 +507,21 @@ updateActionState();
 }
 // --- TASKS SYSTEM ---
 let currentTask = null; let dlTimer = null;
-function openTask(t) {
-currentTask = t; keys={w:false,a:false,s:false,d:false}; clickTarget=null;
+function openTask(t) {currentTask = t; keys={w:false,a:false,s:false,d:false}; clickTarget=null;
 if(t.type==='download') initDownloadTask();
 else if(t.type==='wires') initWiresTask();
 else if(t.type==='swipe') initSwipeTask();
 else if(t.type==='keypad') initKeypadTask();
 }
-function closeTask() {
-['task-wires', 'task-download', 'task-swipe', 'task-keypad'].forEach(id => document.getElementById(id).classList.add('hidden'));
+function closeTask() {['task-wires', 'task-download', 'task-swipe', 'task-keypad'].forEach(id => document.getElementById(id).classList.add('hidden'));
 currentTask=null; clearInterval(dlTimer);
 }
 function finishTask() { if(currentTask) currentTask.completed = true; gameState.completedTasks++; updateTaskBar(); closeTask();
 }
-function initDownloadTask() {
-document.getElementById('task-download').classList.remove('hidden'); document.getElementById('task-download').classList.add('flex');
+function initDownloadTask() {document.getElementById('task-download').classList.remove('hidden'); document.getElementById('task-download').classList.add('flex');
 const bar = document.getElementById('download-progress'); bar.style.width='0%';
 const btn = document.getElementById('btn-download'); btn.innerText='DOWNLOAD'; btn.disabled=false;
-btn.onclick = () => {
-btn.disabled=true; btn.innerText='DOWNLOADING...'; let w = 0;
+btn.onclick = () => {btn.disabled=true; btn.innerText='DOWNLOADING...'; let w = 0;
 dlTimer = setInterval(() => { w+=10; bar.style.width=w+'%'; if(w>=100) { clearInterval(dlTimer); finishTask(); } }, 200);
 }
 
@@ -606,26 +529,20 @@ dlTimer = setInterval(() => { w+=10; bar.style.width=w+'%'; if(w>=100) { clearIn
 
 }
 let wireColors = ['#ef4444', '#3b82f6', '#eab308', '#22c55e']; let activeWireNode = null; let wireConnections = 0;
-function initWiresTask() {
-document.getElementById('task-wires').classList.remove('hidden'); document.getElementById('task-wires').classList.add('flex');
+function initWiresTask() {document.getElementById('task-wires').classList.remove('hidden'); document.getElementById('task-wires').classList.add('flex');
 const lC=document.getElementById('wire-left'); const rC=document.getElementById('wire-right'); const svg=document.getElementById('wire-svg');
 lC.innerHTML=''; rC.innerHTML=''; svg.innerHTML=''; wireConnections=0; activeWireNode=null;
 let lCols = shuffle([...wireColors]); let rCols = shuffle([...wireColors]);
-for(let i=0; i<4; i++) {
-let ln = document.createElement('div'); ln.className='wire-node'; ln.style.backgroundColor=lCols[i]; ln.style.color=lCols[i];
+for(let i=0; i<4; i++) {let ln = document.createElement('div'); ln.className='wire-node'; ln.style.backgroundColor=lCols[i]; ln.style.color=lCols[i];
 ln.dataset.color=lCols[i]; ln.dataset.side='L'; ln.onclick=handleWireClick; lC.appendChild(ln);
 let rn = document.createElement('div'); rn.className='wire-node'; rn.style.backgroundColor=rCols[i]; rn.style.color=rCols[i];
 rn.dataset.color=rCols[i]; rn.dataset.side='R'; rn.onclick=handleWireClick; rC.appendChild(rn);
 }
 }
-function handleWireClick(e) {
-let n = e.target; if(n.dataset.connected) return;
+function handleWireClick(e) {let n = e.target; if(n.dataset.connected) return;
 if(!activeWireNode && n.dataset.side==='L') { activeWireNode=n; n.classList.add('active'); return; }
-if(activeWireNode && n.dataset.side==='R') {
-if(activeWireNode.dataset.color === n.dataset.color) {
-n.dataset.connected='true'; activeWireNode.dataset.connected='true'; activeWireNode.classList.remove('active');
-const svg=document.getElementById('wire-svg'); const rL=activeWireNode.getBoundingClientRect(),
-rR=n.getBoundingClientRect(), rS=svg.getBoundingClientRect();
+if(activeWireNode && n.dataset.side==='R') {if(activeWireNode.dataset.color === n.dataset.color) {n.dataset.connected='true'; activeWireNode.dataset.connected='true'; activeWireNode.classList.remove('active');
+const svg=document.getElementById('wire-svg'); const rL=activeWireNode.getBoundingClientRect(), rR=n.getBoundingClientRect(), rS=svg.getBoundingClientRect();
 const line = document.createElementNS('http://www.w3.org/2000/svg','line');
 line.setAttribute('x1', rL.right-rS.left); line.setAttribute('y1', rL.top+rL.height/2-rS.top); line.setAttribute('x2', rR.left-rS.left);
 line.setAttribute('y2', rR.top+rR.height/2-rS.top);
@@ -636,28 +553,23 @@ activeWireNode=null; wireConnections++; if(wireConnections>=4) setTimeout(finish
 }
 // Swipe Task
 let cardObj = document.getElementById('swipe-card'); let swipeActive = false, swipeStartX = 0, swipeStartTime = 0;
-function initSwipeTask() {
-document.getElementById('task-swipe').classList.remove('hidden'); document.getElementById('task-swipe').classList.add('flex');
+function initSwipeTask() {document.getElementById('task-swipe').classList.remove('hidden'); document.getElementById('task-swipe').classList.add('flex');
 let msg = document.getElementById('swipe-msg'); msg.innerText = "Please swipe card"; msg.className = "text-xl mb-4 font-bold text-gray-700";
 cardObj.style.left = '16px'; cardObj.style.transition = 'none';
 }
-cardObj.onmousedown = cardObj.ontouchstart = (e) => {
-if(currentTask?.type !== 'swipe') return;
+cardObj.onmousedown = cardObj.ontouchstart = (e) => {if(currentTask?.type !== 'swipe') return;
 swipeActive = true; swipeStartX = (e.touches ? e.touches[0].clientX : e.clientX) - cardObj.offsetLeft;
 swipeStartTime = Date.now(); cardObj.style.cursor = 'grabbing'; cardObj.style.transition = 'none';
 };
-document.onmousemove = document.ontouchmove = (e) => {
-if(!swipeActive || currentTask?.type !== 'swipe') return;
+document.onmousemove = document.ontouchmove = (e) => {if(!swipeActive || currentTask?.type !== 'swipe') return;
 let nx = (e.touches ? e.touches[0].clientX : e.clientX) - swipeStartX;
 cardObj.style.left = Math.max(16, Math.min(380, nx)) + 'px';
 };
-document.onmouseup = document.ontouchend = (e) => {
-if(!swipeActive || currentTask?.type !== 'swipe') return;
+document.onmouseup = document.ontouchend = (e) => {if(!swipeActive || currentTask?.type !== 'swipe') return;
 swipeActive = false; cardObj.style.cursor = 'grab';
 let dur = Date.now() - swipeStartTime; let nx = parseInt(cardObj.style.left);
 let msg = document.getElementById('swipe-msg'); cardObj.style.transition = 'left 0.3s';
-if (nx > 340) {
-if (dur < 350) { msg.innerText = "Too fast. Try again."; msg.className = "text-xl mb-4 font-bold text-red-500"; cardObj.style.left
+if (nx > 340) {if (dur < 350) { msg.innerText = "Too fast. Try again."; msg.className = "text-xl mb-4 font-bold text-red-500"; cardObj.style.left
 = '16px'; }
 else if (dur > 1500) { msg.innerText = "Too slow. Try again."; msg.className = "text-xl mb-4 font-bold text-red-500";
 cardObj.style.left = '16px'; }
@@ -666,30 +578,24 @@ else { msg.innerText = "Accepted."; msg.className = "text-xl mb-4 font-bold text
 };
 // Keypad Task
 let keypadCode = ''; let keypadTarget = '';
-function initKeypadTask() {
-document.getElementById('task-keypad').classList.remove('hidden'); document.getElementById('task-keypad').classList.add('flex');
+function initKeypadTask() {document.getElementById('task-keypad').classList.remove('hidden'); document.getElementById('task-keypad').classList.add('flex');
 
 
 
 keypadCode = ''; keypadTarget = Math.floor(10000 + Math.random() * 90000).toString();
 document.getElementById('keypad-target').innerText = keypadTarget; updateKeypadDisplay();
 const grid = document.getElementById('keypad-grid'); grid.innerHTML = '';
-[1,2,3,4,5,6,7,8,9,'C',0,'OK'].forEach(k => {
-let btn = document.createElement('button');
+[1,2,3,4,5,6,7,8,9,'C',0,'OK'].forEach(k => {let btn = document.createElement('button');
 btn.className = "bg-gray-200 hover:bg-gray-100 border-b-4 border-gray-400 active:border-b-0 active:translate-y-1 text-3xl
 font-black rounded-lg py-3 shadow pointer-events-auto transition-all";
 if(k==='C') btn.classList.add('text-red-600'); if(k==='OK') btn.classList.add('text-green-600');
 btn.innerText = k; btn.onclick = () => handleKeypad(k); grid.appendChild(btn);
 });
 }
-function handleKeypad(k) {
-if (k === 'C') keypadCode = '';
-else if (k === 'OK') {
-if (keypadCode === keypadTarget) {
-document.getElementById('keypad-display').innerText = 'ACCEPTED'; document.getElementById('keypad-display').classList.replace('text-green-400', 'text-green-500');
+function handleKeypad(k) {if (k === 'C') keypadCode = '';
+else if (k === 'OK') {if (keypadCode === keypadTarget) {document.getElementById('keypad-display').innerText = 'ACCEPTED'; document.getElementById('keypad-display').classList.replace('text-green-400', 'text-green-500');
 setTimeout(finishTask, 500);
-} else {
-document.getElementById('keypad-display').innerText = 'ERR'; document.getElementById('keypad-display').classList.replace('text-green-400', 'text-red-500');
+} else {document.getElementById('keypad-display').innerText = 'ERR'; document.getElementById('keypad-display').classList.replace('text-green-400', 'text-red-500');
 setTimeout(() => { keypadCode = ''; updateKeypadDisplay(); document.getElementById('keypad-display').classList.replace('text-red-500', 'text-green-400'); }, 500);
 } return;
 } else { if(keypadCode.length < 5) keypadCode += k; }
@@ -697,58 +603,47 @@ updateKeypadDisplay();
 }
 function updateKeypadDisplay() { document.getElementById('keypad-display').innerText = keypadCode; }
 // --- CHAT & MEETING ---
-window.toggleChat = function() {
-isChatOpen = !isChatOpen; const modal = document.getElementById('chat-modal'); const badge =
-document.getElementById('chat-badge');
-if(isChatOpen) {
-modal.classList.remove('hidden'); modal.classList.add('flex'); unreadChatCount = 0; badge.classList.add('hidden');
+window.toggleChat = function() {isChatOpen = !isChatOpen; const modal = document.getElementById('chat-modal'); const badge = document.getElementById('chat-badge');
+if(isChatOpen) {modal.classList.remove('hidden'); modal.classList.add('flex'); unreadChatCount = 0; badge.classList.add('hidden');
 badge.innerText = '0';
 const msgs = document.getElementById('chat-messages'); msgs.scrollTop = msgs.scrollHeight;
 document.getElementById('chat-input').focus();
 } else { modal.classList.add('hidden'); modal.classList.remove('flex'); }
 };
-window.sendMyChat = function() {
-const chatInput = document.getElementById('chat-input'); let txt = chatInput.value.trim();
+window.sendMyChat = function() {const chatInput = document.getElementById('chat-input'); let txt = chatInput.value.trim();
 if(txt && gameState.status === 'meeting') { addChatMessage(myId, txt); chatInput.value = ''; }
 };
-function addChatMessage(pid, text) {
-const p = players[pid]; if(!p) return;
+function addChatMessage(pid, text) {const p = players[pid]; if(!p) return;
 const chatMessages = document.getElementById('chat-messages'); const d = document.createElement('div');
-d.className = `chat-message anim-slide-right ${p.id===myId ? 'ml-auto bg-blue-900 border-blue-500' : 'bg-gray-700 border-gray-
-500'}`;
+d.className = `chat-message anim-slide-right ${p.id===myId ? 'ml-auto bg-blue-900 border-blue-500' : 'bg-gray-700 border-gray-500'}`;
 let nameTag = p.isAlive ? `<span style="color:${p.color}">${p.name}</span>` : `<span class="text-gray-400 italic">${p.name}
 (Ghost)</span>`;
 d.innerHTML = `<div class="font-bold text-xs mb-1 drop-shadow-md flex items-center gap-1">${p.id===gameState.reporterId?'<i
 class="fas fa-bullhorn text-yellow-400 text-[10px]"></i>':''}${nameTag}</div><div class="text-sm text-white font-medium">${text}</div>`;
 chatMessages.appendChild(d); chatMessages.scrollTop = chatMessages.scrollHeight;
-if(!isChatOpen && pid !== myId) {
-unreadChatCount++; const badge = document.getElementById('chat-badge');
+if(!isChatOpen && pid !== myId) {unreadChatCount++; const badge = document.getElementById('chat-badge');
 badge.innerText = unreadChatCount; badge.classList.remove('hidden'); badge.classList.add('anim-pop');
 setTimeout(() => badge.classList.remove('anim-pop'), 300);
 }
 }
-function triggerMeeting(reporterId, bodyColor) {
-closeTask(); bodies = {}; votes = {};
+function triggerMeeting(reporterId, bodyColor) {closeTask(); bodies = {}; votes = {};
 gameState.bodyColor = bodyColor; gameState.reporterId = reporterId;
 gameState.meetingPhase = 'discuss'; gameState.meetEnd = Date.now() + MEETING_TIME*1000;
 
 
 
 let alivePlayers = Object.values(players).filter(p => p.isAlive);
-alivePlayers.forEach((p, i) => {
-let angle = (Math.PI * 2 / alivePlayers.length) * i;
+alivePlayers.forEach((p, i) => {let angle = (Math.PI * 2 / alivePlayers.length) * i;
 p.x = 1200 + Math.cos(angle) * 150; p.y = 1100 + Math.sin(angle) * 150;
 p.walkTime = 0; p.dx = 0; p.dy = 0; p.inVent = false; // Reset vent status
 if(p.isBot) { p.state = 'IDLE'; p.target = null; p.timer = 5; p.stuckFrames = 0; }
 });
 keys = {w:false, a:false, s:false, d:false}; clickTarget = null; actionState = {type: 'NONE', target: null, reportTarget: null, ventTarget:
 null};
-joyActive = false; joystick.active = false; joystick.dx = 0; joystick.dy = 0; document.getElementById('joy-knob').style.transform =
-`translate(0px, 0px)`;
+joyActive = false; joystick.active = false; joystick.dx = 0; joystick.dy = 0; document.getElementById('joy-knob').style.transform = `translate(0px, 0px)`;
 changeState('meeting');
 }
-function showMeetingScreen() {
-isChatOpen = false; unreadChatCount = 0;
+function showMeetingScreen() {isChatOpen = false; unreadChatCount = 0;
 document.getElementById('chat-modal').classList.add('hidden'); document.getElementById('chat-modal').classList.remove('
 flex'); document.getElementById('chat-badge').classList.add('hidden');
 const tit = document.getElementById('meeting-title'); const sub = document.getElementById('meeting-subtitle');
@@ -761,57 +656,42 @@ document.getElementById('meeting-status-text').innerText = `Votes: 0 / ${Object.
 document.getElementById('skip-badges').innerHTML = ''; document.getElementById('chat-messages').innerHTML = '';
 buildVotingGrid(); botTimers.forEach(t => clearTimeout(t)); botTimers=[];
 let alive = Object.values(players).filter(p=>p.isAlive).map(p=>p.id);
-Object.values(players).forEach(p => {
-if(p.isBot && p.isAlive) {
-if(Math.random() > 0.3) {
-botTimers.push(setTimeout(() => {
-if(gameState.status !== 'meeting') return;
+Object.values(players).forEach(p => {if(p.isBot && p.isAlive) {if(Math.random() > 0.3) {botTimers.push(setTimeout(() => {if(gameState.status !== 'meeting') return;
 let msgs = ["Where?", "Who?", "I was doing tasks", "sus", "any proof?", "skip vote"];
 if (gameState.bodyColor) msgs.push(`Where was the body ${repName}?`);
 addChatMessage(p.id, msgs[Math.floor(Math.random() * msgs.length)]);
 }, Math.random()*3000 + 1000));
 }
-botTimers.push(setTimeout(() => {
-if(gameState.status!=='meeting' || gameState.meetingPhase==='tallying') return;
+botTimers.push(setTimeout(() => {if(gameState.status!=='meeting' || gameState.meetingPhase==='tallying') return;
 castVoteForBot(p.id, Math.random()>0.15 ? alive[Math.floor(Math.random()*alive.length)] : 'skip');
 }, Math.random()*4000 + 2000));
 }
 });
 clearInterval(meetingInterval); meetingInterval = setInterval(updateMeetingTimer, 1000); updateMeetingTimer();
 }
-window.selectPlayerToVote = function(targetId) {
-if(votes[myId] || gameState.meetingPhase==='tallying') return;
+window.selectPlayerToVote = function(targetId) {if(votes[myId] || gameState.meetingPhase==='tallying') return;
 window.cancelVote();
 const targetConfirm = document.getElementById(`confirm-${targetId}`); const targetCard = document.getElementById(`card-
 ${targetId}`);
 if(targetConfirm) targetConfirm.classList.remove('hidden'); if(targetCard) targetCard.classList.add('selected');
 };
-window.cancelVote = function(e) {
-if(e) { e.preventDefault(); e.stopPropagation(); }
-Object.keys(players).forEach(id => {
-let el = document.getElementById(`confirm-${id}`); if(el) el.classList.add('hidden');
+window.cancelVote = function(e) {if(e) { e.preventDefault(); e.stopPropagation(); }
+Object.keys(players).forEach(id => {let el = document.getElementById(`confirm-${id}`); if(el) el.classList.add('hidden');
 let card = document.getElementById(`card-${id}`); if(card) card.classList.remove('selected');
 });
 };
-window.submitVote = function(targetId) {
-
-
-
-if(votes[myId] || gameState.meetingPhase==='tallying' || !players[myId].isAlive) return;
+window.submitVote = function(targetId) {if(votes[myId] || gameState.meetingPhase==='tallying' || !players[myId].isAlive) return;
 votes[myId] = targetId; window.cancelVote();
 let pCard = document.getElementById(`card-${myId}`); if(pCard) pCard.classList.add('voted');
 let vText = document.getElementById(`vote-status-${myId}`); if(vText) vText.classList.remove('hidden'); checkVotes();
 };
-function castVoteForBot(botId, targetId) {
-if(votes[botId] || gameState.meetingPhase==='tallying') return;
+function castVoteForBot(botId, targetId) {if(votes[botId] || gameState.meetingPhase==='tallying') return;
 votes[botId] = targetId;
 let pCard = document.getElementById(`card-${botId}`); if(pCard) pCard.classList.add('voted');
 let vText = document.getElementById(`vote-status-${botId}`); if (vText) vText.classList.remove('hidden'); checkVotes();
 }
-function buildVotingGrid() {
-const g = document.getElementById('players-grid'); g.innerHTML = '';
-for(let id in players) {
-let p = players[id]; const d = document.createElement('div');
+function buildVotingGrid() {const g = document.getElementById('players-grid'); g.innerHTML = '';
+for(let id in players) {let p = players[id]; const d = document.createElement('div');
 d.className = `player-vote-card ${!p.isAlive?'dead':''}`; d.id = `card-${p.id}`;
 let reporterIcon = gameState.reporterId === p.id ? `<i class="fas fa-bullhorn text-yellow-400 absolute top-2 left-2 drop-shadow-md text-lg z-10 pointer-events-none"></i>` : '';
 let deadOverlay = !p.isAlive ? `<i class="fas fa-skull text-red-500 absolute top-1/2 right-4 -translate-y-1/2 text-3xl opacity-80
@@ -835,27 +715,21 @@ if(p.isAlive && players[myId].isAlive) d.setAttribute('onclick', `selectPlayerTo
 g.appendChild(d);
 }
 }
-function updateMeetingTimer() {
-if(gameState.status!=='meeting') return;
+function updateMeetingTimer() {if(gameState.status!=='meeting') return;
 let rem = Math.max(0, Math.floor((gameState.meetEnd - Date.now())/1000));
 document.getElementById('meeting-timer').innerText = rem;
-if(rem<=0 && gameState.meetingPhase==='discuss') {
-let alive = Object.values(players).filter(p=>p.isAlive); alive.forEach(p => { if(!votes[p.id]) votes[p.id] = 'skip'; }); beginTallying();
+if(rem<=0 && gameState.meetingPhase==='discuss') {let alive = Object.values(players).filter(p=>p.isAlive); alive.forEach(p => { if(!votes[p.id]) votes[p.id] = 'skip'; }); beginTallying();
 }
 }
-function checkVotes() {
-let aliveCount = Object.values(players).filter(p=>p.isAlive).length; let castCount = Object.keys(votes).length;
+function checkVotes() {let aliveCount = Object.values(players).filter(p=>p.isAlive).length; let castCount = Object.keys(votes).length;
 document.getElementById('meeting-status-text').innerText = `Votes: ${castCount} / ${aliveCount}`;
 if(castCount >= aliveCount && gameState.meetingPhase === 'discuss') beginTallying();
 }
-function beginTallying() {
-if(gameState.meetingPhase==='tallying') return;
+function beginTallying() {if(gameState.meetingPhase==='tallying') return;
 gameState.meetingPhase='tallying'; clearInterval(meetingInterval);
-document.getElementById('meeting-status-text').innerText = "Voting Results"; document.getElementById('meeting-status-text').
-className = "text-yellow-400 font-black";
+document.getElementById('meeting-status-text').innerText = "Voting Results"; document.getElementById('meeting-status-text').className = "text-yellow-400 font-black";
 for(let p in players) { let el = document.getElementById(`vote-status-${p}`); if(el) el.classList.add('hidden'); }
-for(let voterId in votes) {
-let targetId = votes[voterId]; let voter = players[voterId];
+for(let voterId in votes) {let targetId = votes[voterId]; let voter = players[voterId];
 if(targetId === 'skip') { document.getElementById('skip-badges').innerHTML += `<div class="vote-badge anim-pop"
 
 
@@ -868,14 +742,11 @@ let max=0, ej=null, tie=false;
 for(let t in cnts) { if(cnts[t]>max){max=cnts[t];ej=t;tie=false;} else if(cnts[t]===max)tie=true; }
 setTimeout(() => { showEjectionOverlay(ej, tie); }, 4000);
 }
-function showEjectionOverlay(ej, tie) {
-const overlay = document.getElementById('vote-tally-overlay'); const tit = document.getElementById('vote-results-title'); const sub = document.getElementById('vote-results-subtitle');
+function showEjectionOverlay(ej, tie) {const overlay = document.getElementById('vote-tally-overlay'); const tit = document.getElementById('vote-results-title'); const sub = document.getElementById('vote-results-subtitle');
 overlay.classList.remove('hidden'); overlay.classList.add('flex');
 if(tie || ej==='skip' || !ej) { tit.innerText="No one was ejected. (Tie/Skip)"; tit.className="text-4xl font-black text-gray-300 mb-6
 drop-shadow-lg text-center px-4"; sub.innerText=""; }
-else {
-let ep = players[ej]; if(ep) {
-tit.innerText=`${ep.name} was ejected.`; tit.className=`text-5xl font-black mb-6 drop-shadow-lg text-center px-4
+else {let ep = players[ej]; if(ep) {tit.innerText=`${ep.name} was ejected.`; tit.className=`text-5xl font-black mb-6 drop-shadow-lg text-center px-4
 ${ep.isImpostor?'text-green-400':'text-red-500'}`;
 sub.innerText=`${ep.name} was ${ep.isImpostor?"The Impostor.":"not The Impostor."}`; ep.isAlive=false;
 }
@@ -883,40 +754,33 @@ sub.innerText=`${ep.name} was ${ep.isImpostor?"The Impostor.":"not The Impostor.
 Object.values(players).forEach(p => { if(p.isImpostor) p.killCD = INITIAL_KILL_COOLDOWN; });
 setTimeout(()=>{ if(gameState.status==='meeting') changeState('playing'); }, 5000);
 }
-function checkWin() {
-let ac=0, ai=0; Object.values(players).forEach(p=>{if(p.isAlive){if(p.isImpostor)ai++;else ac++;}});
+function checkWin() {let ac=0, ai=0; Object.values(players).forEach(p=>{if(p.isAlive){if(p.isImpostor)ai++;else ac++;}});
 let win = null;
 if(ai===0 || (gameState.totalTasks>0 && gameState.completedTasks>=gameState.totalTasks)) win='CREW';
 else if(ai>=ac) win='IMP';
-if(win) {
-let m = players[myId]; const t=document.getElementById('end-title'); const s=document.getElementById('end-subtitle');
-if((win==='IMP'&&m.isImpostor) || (win==='CREW'&&!m.isImpostor)) { t.innerText="VICTORY"; t.className="text-7xl md:text-
-9xl font-black mb-4 tracking-widest text-cyan-400 drop-shadow-[0_0_40px_cyan]"; s.innerText="Mission Accomplished."; }
+if(win) {let m = players[myId]; const t=document.getElementById('end-title'); const s=document.getElementById('end-subtitle');
+if((win==='IMP'&&m.isImpostor) || (win==='CREW'&&!m.isImpostor)) { t.innerText="VICTORY"; t.className="text-7xl md:text-9xl font-black mb-4 tracking-widest text-cyan-400 drop-shadow-[0_0_40px_cyan]"; s.innerText="Mission Accomplished."; }
 else { t.innerText="DEFEAT"; t.className="text-7xl md:text-9xl font-black mb-4 tracking-widest text-red-600 drop-shadow-[0_0_40px_red]"; s.innerText="The Impostors won."; }
 changeState('gameover');
 }
 }
 document.getElementById('return-lobby-btn').onclick=()=>changeState('lobby');
 // --- RENDER ---
-function render() {
-const m = players[myId]; if(!m) return;
+function render() {const m = players[myId]; if(!m) return;
 ctx.fillStyle='#0f172a'; ctx.fillRect(0,0,canvas.width,canvas.height);
 ctx.save();
 camera.x = m.x - canvas.width/2; camera.y = m.y - canvas.height/2;
 ctx.translate(-camera.x, -camera.y);
 drawMap();
 ventArrows = []; // Reset arrows
-if (clickTarget && m.isAlive) { ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; ctx.beginPath(); ctx.arc(clickTarget.x, clickTarget.y, 10, 0,
-Math.PI * 2); ctx.fill(); }
+if (clickTarget && m.isAlive) { ctx.fillStyle = 'rgba(255, 255, 255, 0.4)'; ctx.beginPath(); ctx.arc(clickTarget.x, clickTarget.y, 10, 0, Math.PI * 2); ctx.fill(); }
 ctx.fillStyle='#27272a'; ctx.beginPath(); ctx.roundRect(emergencyButton.x-70, emergencyButton.y-70, 140, 140, 20); ctx.fill();
 ctx.fillStyle='#18181b'; ctx.beginPath(); ctx.roundRect(emergencyButton.x-50, emergencyButton.y-50, 100, 100, 50); ctx.fill();
 ctx.fillStyle='#ef4444'; ctx.beginPath(); ctx.arc(emergencyButton.x, emergencyButton.y, emergencyButton.radius, 0, Math.PI*2);
 ctx.fill();
 ctx.strokeStyle='#7f1d1d'; ctx.lineWidth=6; ctx.stroke(); ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.beginPath();
 ctx.ellipse(emergencyButton.x-10, emergencyButton.y-10, 10, 5, Math.PI/4, 0, Math.PI*2); ctx.fill();
-if(!m.isImpostor && m.isAlive) {
-myTasks.forEach(t=>{if(!t.completed){
-ctx.fillStyle='rgba(252, 211, 77, 0.3)'; ctx.beginPath(); ctx.arc(t.x,t.y,45,0,Math.PI*2); ctx.fill();
+if(!m.isImpostor && m.isAlive) {myTasks.forEach(t=>{if(!t.completed){ctx.fillStyle='rgba(252, 211, 77, 0.3)'; ctx.beginPath(); ctx.arc(t.x,t.y,45,0,Math.PI*2); ctx.fill();
 
 
 
@@ -926,11 +790,9 @@ ctx.strokeStyle='#fcd34d'; ctx.lineWidth=4+Math.sin(Date.now()/150)*2; ctx.strok
 for(let id in bodies) { let b=bodies[id]; drawBody(b); }
 let s=[...Object.values(players)].sort((a,b)=>a.y-b.y); s.forEach(p => { if(!p.isAlive && m.isAlive) return; drawPlayer(p); });
 // Draw Vent Travel Arrows if Inside Vent
-if (m.isAlive && m.inVent) {
-let curV = vents.find(v => v.id === m.ventId);
+if (m.isAlive && m.inVent) {let curV = vents.find(v => v.id === m.ventId);
 let nextV = vents.find(v => v.id === curV.next);
-if (curV && nextV) {
-let dx = nextV.x - curV.x; let dy = nextV.y - curV.y; let ang = Math.atan2(dy, dx);
+if (curV && nextV) {let dx = nextV.x - curV.x; let dy = nextV.y - curV.y; let ang = Math.atan2(dy, dx);
 let ax = curV.x + Math.cos(ang)*80; let ay = curV.y + Math.sin(ang)*80;
 ctx.save(); ctx.translate(ax, ay); ctx.rotate(ang);
 ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
@@ -941,42 +803,33 @@ ventArrows.push({ x: ax, y: ay, targetId: nextV.id });
 }
 }
 ctx.restore();
-if (gameState.status==='playing' && m.isAlive) {
-let rad = m.isImpostor?IMPOSTOR_VISION:CREWMATE_VISION;
+if (gameState.status==='playing' && m.isAlive) {let rad = m.isImpostor?IMPOSTOR_VISION:CREWMATE_VISION;
 let px = canvas.width/2; let py = canvas.height/2;
 let g = ctx.createRadialGradient(px, py, rad*0.3, px, py, rad);
 g.addColorStop(0, 'rgba(0,0,0,0)'); g.addColorStop(0.7, 'rgba(0,0,0,0.7)'); g.addColorStop(1, 'rgba(0,0,0,0.98)');
 ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height);
-} else if (!m.isAlive && gameState.status==='playing') {
-ctx.fillStyle='rgba(0,50,150,0.2)'; ctx.fillRect(0,0,canvas.width,canvas.height);
+} else if (!m.isAlive && gameState.status==='playing') {ctx.fillStyle='rgba(0,50,150,0.2)'; ctx.fillRect(0,0,canvas.width,canvas.height);
 }
 }
-function drawMap() {
-ctx.fillStyle = '#1e293b'; [...rooms, ...corridors].forEach(r => ctx.fillRect(r.x, r.y, r.w, r.h));
-rooms.forEach(r => {
-ctx.fillStyle = r.color; ctx.fillRect(r.x+8, r.y+8, r.w-16, r.h-16);
+function drawMap() {ctx.fillStyle = '#1e293b'; [...rooms, ...corridors].forEach(r => ctx.fillRect(r.x, r.y, r.w, r.h));
+rooms.forEach(r => {ctx.fillStyle = r.color; ctx.fillRect(r.x+8, r.y+8, r.w-16, r.h-16);
 ctx.fillStyle='rgba(255,255,255,0.15)'; ctx.font='bold 50px "Segoe UI"'; ctx.textAlign='center'; ctx.textBaseline='middle';
 ctx.fillText(r.name, r.x+r.w/2, r.y+r.h/2);
 });
-ctx.strokeStyle='#0f172a'; ctx.lineWidth=24; ctx.lineJoin='round'; [...rooms, ...corridors].forEach(r => ctx.strokeRect(r.x, r.y, r.w,
-r.h));
+ctx.strokeStyle='#0f172a'; ctx.lineWidth=24; ctx.lineJoin='round'; [...rooms, ...corridors].forEach(r => ctx.strokeRect(r.x, r.y, r.w, r.h));
 // Draw Vents
-vents.forEach(v => {
-ctx.fillStyle = '#4a5568'; ctx.fillRect(v.x - 35, v.y - 25, 70, 50);
+vents.forEach(v => {ctx.fillStyle = '#4a5568'; ctx.fillRect(v.x - 35, v.y - 25, 70, 50);
 ctx.strokeStyle = '#1a202c'; ctx.lineWidth = 4; ctx.strokeRect(v.x - 35, v.y - 25, 70, 50);
 ctx.lineWidth = 3; ctx.beginPath(); ctx.moveTo(v.x-25, v.y-10); ctx.lineTo(v.x+25, v.y-10); ctx.stroke();
 ctx.beginPath(); ctx.moveTo(v.x-25, v.y); ctx.lineTo(v.x+25, v.y); ctx.stroke();
 ctx.beginPath(); ctx.moveTo(v.x-25, v.y+10); ctx.lineTo(v.x+25, v.y+10); ctx.stroke();
 });
 }
-function drawPlayer(p) {
-if (p.inVent) {
-if (p.id !== myId && (!players[myId].isImpostor || !players[myId].isAlive)) return; // Hidden from crewmates
+function drawPlayer(p) {if (p.inVent) {if (p.id !== myId && (!players[myId].isImpostor || !players[myId].isAlive)) return; // Hidden from crewmates
 ctx.save();
 ctx.beginPath(); ctx.rect(p.x - 40, p.y - 40, 80, 80); ctx.clip(); // Clip into vent
 ctx.translate(p.x, p.y + 15); ctx.globalAlpha = 0.6;
-} else {
-ctx.save(); ctx.translate(p.x, p.y);
+} else {ctx.save(); ctx.translate(p.x, p.y);
 }
 if (!p.facingRight) ctx.scale(-1, 1);
 if (!p.isAlive) ctx.globalAlpha = 0.4;
@@ -996,14 +849,12 @@ ctx.fillStyle='#475569'; ctx.beginPath(); ctx.roundRect(-2,-20,26,16,8); ctx.fil
 ctx.fillStyle='#bae6fd'; ctx.beginPath(); ctx.roundRect(0,-18,22,12,6); ctx.fill();
 ctx.fillStyle='#ffffff'; ctx.beginPath(); ctx.roundRect(12,-16,8,4,2); ctx.fill();
 ctx.restore();
-if (p.isAlive && !p.inVent) {
-ctx.fillStyle=(players[myId].isImpostor && p.isImpostor)?'#ef4444':'#ffffff';
+if (p.isAlive && !p.inVent) {ctx.fillStyle=(players[myId].isImpostor && p.isImpostor)?'#ef4444':'#ffffff';
 ctx.font='bold 16px "Segoe UI"'; ctx.textAlign='center';
 ctx.strokeStyle='black'; ctx.lineWidth=4; ctx.strokeText(p.name, p.x, p.y-45); ctx.fillText(p.name, p.x, p.y-45);
 }
 }
-function drawBody(b) {
-ctx.save(); ctx.translate(b.x, b.y);
+function drawBody(b) {ctx.save(); ctx.translate(b.x, b.y);
 ctx.fillStyle='#990000'; ctx.beginPath(); ctx.ellipse(0,10,30,15,0,0,Math.PI*2); ctx.fill();
 ctx.fillStyle=b.color; ctx.beginPath(); ctx.roundRect(-20,-5,40,18, 10); ctx.fill();
 ctx.fillStyle=darken(b.color,20); ctx.beginPath(); ctx.ellipse(0,-5,20,8,0,0,Math.PI*2); ctx.fill();
@@ -1011,17 +862,12 @@ ctx.fillStyle='#e2e8f0'; ctx.beginPath(); ctx.roundRect(-6,-20,12,16,3); ctx.fil
 ctx.beginPath(); ctx.arc(-6,-20,6,0,Math.PI*2); ctx.fill(); ctx.beginPath(); ctx.arc(6,-20,6,0,Math.PI*2); ctx.fill();
 ctx.restore();
 }
-function updateTaskBar() {
-let pct = gameState.totalTasks===0 ? 0 : (gameState.completedTasks/gameState.totalTasks)*100;
+function updateTaskBar() {let pct = gameState.totalTasks===0 ? 0 : (gameState.completedTasks/gameState.totalTasks)*100;
 document.getElementById('task-bar-fill').style.width = Math.min(100,pct)+'%';
 }
 // Setup interaction listener with vents included
-function handleInteractionInput(clientX, clientY) {
-let cx = clientX + camera.x; let cy = clientY + camera.y; const m = players[myId];
-if (m && m.inVent) {
-for (let a of ventArrows) {
-if (Math.hypot(cx - a.x, cy - a.y) < 60) {
-m.ventId = a.targetId; let nv = vents.find(v => v.id === m.ventId); m.x = nv.x; m.y = nv.y; return;
+function handleInteractionInput(clientX, clientY) {let cx = clientX + camera.x; let cy = clientY + camera.y; const m = players[myId];
+if (m && m.inVent) {for (let a of ventArrows) {if (Math.hypot(cx - a.x, cy - a.y) < 60) {m.ventId = a.targetId; let nv = vents.find(v => v.id === m.ventId); m.x = nv.x; m.y = nv.y; return;
 }
 }
 } else if (gameState.status === 'playing' && !joyActive) { clickTarget = { x: cx, y: cy }; }
