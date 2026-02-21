@@ -3,9 +3,9 @@
 <head>
     <title>Demo Game</title>
     <style>
-        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #222; color: #fff; font-family: sans-serif; overflow: hidden; }
-        #canvas { background: #333; border: 4px solid #555; cursor: crosshair; }
-        .score { position: absolute; top: 20px; font-size: 24px; pointer-events: none; }
+        body { margin: 0; display: flex; justify-content: center; align-items: center; height: 100vh; background: #222; color: #fff; font-family: sans-serif; overflow: hidden; touch-action: none; }
+        #canvas { background: #333; border: 4px solid #555; cursor: crosshair; max-width: 100%; max-height: 100%; }
+        .score { position: absolute; top: 20px; font-size: 24px; pointer-events: none; user-select: none; }
     </style>
 </head>
 <body>
@@ -34,20 +34,40 @@
             requestAnimationFrame(draw);
         }
 
-        canvas.addEventListener('mousedown', (e) => {
+        function handleInput(e) {
+            e.preventDefault(); // Prevent scrolling/zooming
             const rect = canvas.getBoundingClientRect();
-            const mouseX = e.clientX - rect.left;
-            const mouseY = e.clientY - rect.top;
+            
+            // Handle both touch and mouse events
+            let clientX, clientY;
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else {
+                clientX = e.clientX;
+                clientY = e.clientY;
+            }
+
+            // Calculate scale in case canvas is resized via CSS
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+
+            const mouseX = (clientX - rect.left) * scaleX;
+            const mouseY = (clientY - rect.top) * scaleY;
+
             const dist = Math.sqrt((mouseX - ball.x)**2 + (mouseY - ball.y)**2);
             
-            if(dist < ball.r) {
+            if(dist < ball.r * 1.5) { // Slightly larger hit area for easier tapping
                 score++;
                 document.getElementById('score').innerText = score;
                 ball.dx *= 1.1;
                 ball.dy *= 1.1;
                 ball.color = `hsl(${Math.random() * 360}, 70%, 50%)`;
             }
-        });
+        }
+
+        canvas.addEventListener('mousedown', handleInput);
+        canvas.addEventListener('touchstart', handleInput, { passive: false });
 
         draw();
     </script>
