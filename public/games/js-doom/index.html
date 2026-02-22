@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>JS DOOM: Cross-Platform Combat</title>
+    <style>
+        :root {
+            --ui-red: #d32f2f;
+            --btn-bg: rgba(255, 255, 255, 0.15);
+            --btn-active: rgba(211, 47, 47, 0.8);
+        }
+        body {
+            margin: 0; padding: 0; background: #000; color: #fff;
+            font-family: 'Courier New', monospace; overflow: hidden;
+            height: 100vh; touch-action: none; user-select: none;
+        }
+        #game-container { position: relative; width: 100vw; height: 100vh; background: #000; }
+        canvas#viewCanvas { display: block; width: 100%; height: 100%; image-rendering: pixelated; }
+        
+        /* HUD */
+        #hud {
+            position: absolute; top: 0; left: 0; width: 100%; padding: 10px;
+            display: flex; justify-content: space-between; pointer-events: none;
+            box-sizing: border-box; background: linear-gradient(to bottom, rgba(0,0,0,0.7), transparent);
+        }
+        .stat { background: rgba(0,0,0,0.5); padding: 5px 15px; border-left: 4px solid var(--ui-red); font-weight: bold; }
+        
+        /* Controls */
+        .controls { position: absolute; bottom: 20px; left: 0; right: 0; display: flex; justify-content: space-between; padding: 0 20px; pointer-events: none; }
+        .d-pad { display: grid; grid-template-columns: repeat(3, 65px); gap: 8px; pointer-events: auto; }
+        .side-pad { display: flex; flex-direction: column; gap: 10px; pointer-events: auto; align-items: flex-end; }
+        .btn {
+            width: 65px; height: 65px; background: var(--btn-bg); border: 2px solid rgba(255,255,255,0.2);
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            font-size: 24px; color: white; transition: 0.1s;
+        }
+        .btn:active { background: var(--btn-active); transform: scale(0.9); }
+        .btn-fire { width: 90px; height: 90px; background: var(--ui-red); border-radius: 50%; font-size: 16px; font-weight: bold; box-shadow: 0 0 20px rgba(211,47,47,0.4); }
+
+        /* Hide touch controls if on PC */
+        @media (pointer: fine) {
+            .controls { opacity: 0.3; transition: opacity 0.3s; }
+            .controls:hover { opacity: 1.0; }
+        }
+
+        #weapon-container {
+            position: absolute; bottom: 0; left: 50%; transform: translateX(-50%);
+            width: 250px; pointer-events: none;
+        }
+        #flash { position: absolute; inset: 0; background: white; opacity: 0; pointer-events: none; z-index: 5; }
+        
+        #overlay {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.9);
+            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100;
+            text-align: center; padding: 20px;
+        }
+        .start-btn { background: var(--ui-red); border: none; color: white; padding: 15px 40px; font-size: 20px; border-radius: 5px; cursor: pointer; }
+        .pc-hint { margin-top: 15px; font-size: 14px; color: #888; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="viewCanvas"></canvas>
+    <div id="flash"></div>
+
+    <div id="hud">
+        <div class="stat">HEALTH: <span id="hp">100</span>%</div>
+        <div class="stat">ENEMIES: <span id="count">0</span></div>
+    </div>
+
+    <div id="weapon-container">
+        <svg id="weapon" viewBox="0 0 200 200">
+            <rect x="85" y="100" width="30" height="100" fill="#444" />
+            <rect x="80" y="140" width="40" height="60" fill="#333" />
+            <circle cx="100" cy="100" r="15" fill="#222" />
+            <rect x="95" y="80" width="10" height="25" fill="#111" />
+        </svg>
+    </div>
+
+    <div class="controls">
+        <div class="d-pad">
+            <div class="btn" id="m-left">←</div>
+            <div class="btn" id="m-up">↑</div>
+            <div class="btn" id="m-right">→</div>
+            <div></div>
+            <div class="btn" id="m-down">↓</div>
+        </div>
+        <div class="side-pad">
+            <div class="btn btn-fire" id="m-fire">FIRE</div>
+            <div style="display: flex; gap: 10px;">
+                <div class="btn" id="r-left">⟲</div>
+                <div class="btn" id="r-right">⟳</div>
+            </div>
+        </div>
+    </div>
+
+    <div id="overlay">
+        <h1 style="color: var(--ui-red); font-size: 3rem; margin: 0;">JS DOOM</h1>
+        <p>Eliminate all monsters. Don't let them touch you.</p>
+        <button class="start-btn" id="start-btn">START MISSION</button>
+        <div class="pc-hint">
+            PC: WASD to Move | Arrows to Turn | Space to Fire<br>
+            Mobile: Use On-Screen Controls
+        </div>
+    </div>
+</div>
+
+<script>
+    const TILE_SIZE = 64;
+    const MAP_SIZE = 16;
+    const FOV = Math.PI / 3;
+    const RES = 2; 
+
+    const worldMap = [
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
+        [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+        [1,0,1,1,1,0,0,0,1,1,1,0,0,0,0,1],
+        [1,0,1,0,0,0,0,0,0,0,1,0,0,0,0,1],
+        [1,0,1,0,0,1,1,1,0,0,1,0,0,0,0,1],
+        [1,0,0,0,0,1,0,1,0,0,0,0,0,0,0,1],
+        [1,0,0,0,0,1,0,1,0,0,0,0,1,1,1,1],
+        [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+        [1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,1],
+        [1,0,0,0,0,0,0,1,1,1,1,0,0,0,0,1],
+        [1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1],
+        [1,0,1,1,1,0,0,1,0,0,0,0,0,0,0,1],
+        [1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
+        [1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1],
+        [1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
+        [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+    ];
+
+    const canvas = document.getElementById('viewCanvas');
+    const ctx = canvas.getContext('2d');
+    const hpDisplay = document.getElementById('hp');
+    const countDisplay = document.getElementById('count');
+    const weapon = document.getElementById('weapon');
+    const flash = document.getElementById('flash');
+
+    const player = {
+        x: 100, y: 100, dir: 0.5,
+        hp: 100, bob: 0, dead: false,
+        speed: 3.5, rotSpeed: 0.06
+    };
+
+    let enemies = [
+        { x: 300, y: 300, hp: 100, alive: true },
+        { x: 700, y: 150, hp: 100, alive: true },
+        { x: 200, y: 800, hp: 100, alive: true },
+        { x: 800, y: 500, hp: 100, alive: true },
+        { x: 500, y: 700, hp: 100, alive: true }
+    ];
+
+    let bullets = []; // Active projectiles
+
+    const input = { up: 0, down: 0, left: 0, right: 0, turnL: 0, turnR: 0 };
+    let zBuffer = []; 
+
+    function setupControls() {
+        // Touch Binds
+        const bind = (id, key) => {
+            const el = document.getElementById(id);
+            el.ontouchstart = (e) => { e.preventDefault(); input[key] = 1; };
+            el.ontouchend = (e) => { e.preventDefault(); input[key] = 0; };
+        };
+        bind('m-up', 'up'); bind('m-down', 'down');
+        bind('m-left', 'left'); bind('m-right', 'right');
+        bind('r-left', 'turnL'); bind('r-right', 'turnR');
+        
+        document.getElementById('m-fire').ontouchstart = (e) => {
+            e.preventDefault();
+            fire();
+        };
+
+        // PC Keyboard Binds
+        window.addEventListener('keydown', (e) => {
+            if (player.dead) return;
+            switch(e.code) {
+                case 'KeyW': case 'ArrowUp': input.up = 1; break;
+                case 'KeyS': case 'ArrowDown': input.down = 1; break;
+                case 'KeyA': input.left = 1; break;
+                case 'KeyD': input.right = 1; break;
+                case 'ArrowLeft': input.turnL = 1; break;
+                case 'ArrowRight': input.turnR = 1; break;
+                case 'Space': case 'ControlLeft': case 'ControlRight': fire(); break;
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            switch(e.code) {
+                case 'KeyW': case 'ArrowUp': input.up = 0; break;
+                case 'KeyS': case 'ArrowDown': input.down = 0; break;
+                case 'KeyA': input.left = 0; break;
+                case 'KeyD': input.right = 0; break;
+                case 'ArrowLeft': input.turnL = 0; break;
+                case 'ArrowRight': input.turnR = 0; break;
+            }
+        });
+
+        document.getElementById('start-btn').onclick = () => {
+            document.getElementById('overlay').style.display = 'none';
+            if(player.dead) location.reload();
+        };
+    }
+
+    function fire() {
+        if (player.dead) return;
+        
+        // Visuals
+        flash.style.opacity = '0.4';
+        setTimeout(() => flash.style.opacity = '0', 40);
+        weapon.style.transform = 'translateY(25px) scale(1.15)';
+        setTimeout(() => weapon.style.transform = 'translateY(0) scale(1)', 100);
+
+        // Spawn bullet
+        bullets.push({
+            x: player.x,
+            y: player.y,
+            dir: player.dir,
+            speed: 12,
+            active: true
+        });
+    }
+
+    function update() {
+        if (player.dead) return;
+
+        if (input.turnL) player.dir -= player.rotSpeed;
+        if (input.turnR) player.dir += player.rotSpeed;
+
+        let dx = 0, dy = 0;
+        if (input.up) { dx += Math.cos(player.dir); dy += Math.sin(player.dir); }
+        if (input.down) { dx -= Math.cos(player.dir); dy -= Math.sin(player.dir); }
+        if (input.left) { dx += Math.cos(player.dir - Math.PI/2); dy += Math.sin(player.dir - Math.PI/2); }
+        if (input.right) { dx += Math.cos(player.dir + Math.PI/2); dy += Math.sin(player.dir + Math.PI/2); }
+
+        const moveX = dx * player.speed;
+        const moveY = dy * player.speed;
+
+        if (worldMap[Math.floor(player.y/TILE_SIZE)][Math.floor((player.x + moveX)/TILE_SIZE)] === 0) player.x += moveX;
+        if (worldMap[Math.floor((player.y + moveY)/TILE_SIZE)][Math.floor(player.x/TILE_SIZE)] === 0) player.y += moveY;
+
+        if(dx !== 0 || dy !== 0) {
+            player.bob += 0.2;
+            weapon.style.bottom = Math.sin(player.bob) * 10 + 'px';
+        }
+
+        // Update Bullets
+        for(let i = bullets.length - 1; i >= 0; i--) {
+            let b = bullets[i];
+            b.x += Math.cos(b.dir) * b.speed;
+            b.y += Math.sin(b.dir) * b.speed;
+
+            // Wall collision
+            if(worldMap[Math.floor(b.y/TILE_SIZE)][Math.floor(b.x/TILE_SIZE)] > 0) {
+                bullets.splice(i, 1);
+                continue;
+            }
+
+            // Enemy collision
+            let hitEnemy = false;
+            for(let en of enemies) {
+                if(!en.alive) continue;
+                const dist = Math.sqrt((b.x - en.x)**2 + (b.y - en.y)**2);
+                if(dist < 30) {
+                    en.hp -= 35;
+                    if(en.hp <= 0) en.alive = false;
+                    hitEnemy = true;
+                    break;
+                }
+            }
+            if(hitEnemy) {
+                bullets.splice(i, 1);
+                continue;
+            }
+        }
+
+        // Enemy AI & Player Damage
+        let aliveCount = 0;
+        enemies.forEach(en => {
+            if(!en.alive) return;
+            aliveCount++;
+            const dist = Math.sqrt((player.x - en.x)**2 + (player.y - en.y)**2);
+            
+            if(dist > 40 && dist < 450) {
+                en.x += Math.cos(Math.atan2(player.y - en.y, player.x - en.x)) * 1.8;
+                en.y += Math.sin(Math.atan2(player.y - en.y, player.x - en.x)) * 1.8;
+            }
+
+            if(dist < 38) {
+                player.hp -= 0.6;
+                if(player.hp <= 0) {
+                    player.hp = 0;
+                    gameOver(false);
+                }
+            }
+        });
+
+        hpDisplay.innerText = Math.ceil(player.hp);
+        countDisplay.innerText = aliveCount;
+        if(aliveCount === 0) gameOver(true);
+    }
+
+    function render() {
+        ctx.fillStyle = '#0a0a0a'; ctx.fillRect(0, 0, canvas.width, canvas.height/2);
+        ctx.fillStyle = '#1a1a1a'; ctx.fillRect(0, canvas.height/2, canvas.width, canvas.height/2);
+
+        zBuffer = [];
+        const numRays = canvas.width;
+        const step = FOV / numRays;
+
+        for(let i=0; i < numRays; i++) {
+            const rayAngle = (player.dir - FOV/2) + (i * step);
+            const cosA = Math.cos(rayAngle), sinA = Math.sin(rayAngle);
+            let dist = 0, hit = false, side = 0;
+
+            while(!hit && dist < 800) {
+                dist += 3;
+                let tx = Math.floor((player.x + cosA * dist) / TILE_SIZE);
+                let ty = Math.floor((player.y + sinA * dist) / TILE_SIZE);
+                if(tx < 0 || tx >= MAP_SIZE || ty < 0 || ty >= MAP_SIZE || worldMap[ty][tx] > 0) {
+                    hit = true;
+                    const px = (player.x + cosA * dist) % TILE_SIZE;
+                    side = (px < 2 || px > TILE_SIZE - 2) ? 0 : 1;
+                }
+            }
+
+            const corrected = dist * Math.cos(rayAngle - player.dir);
+            zBuffer[i] = corrected;
+            const h = (TILE_SIZE * canvas.height) / corrected;
+            let c = Math.max(15, 160 - (corrected/3.5));
+            if(side) c *= 0.6;
+            ctx.fillStyle = `rgb(${c}, ${c*0.1}, ${c*0.1})`;
+            ctx.fillRect(i, (canvas.height - h)/2, 1, h);
+        }
+
+        // Draw Sprites (Enemies and Bullets)
+        let sprites = [
+            ...enemies.filter(e => e.alive).map(e => ({...e, type: 'enemy'})),
+            ...bullets.map(b => ({...b, type: 'bullet'}))
+        ];
+
+        sprites.sort((a,b) => {
+            const distA = (player.x - a.x)**2 + (player.y - a.y)**2;
+            const distB = (player.x - b.x)**2 + (player.y - b.y)**2;
+            return distB - distA;
+        });
+
+        sprites.forEach(s => {
+            const dx = s.x - player.x, dy = s.y - player.y;
+            const dist = Math.sqrt(dx*dx + dy*dy);
+            let spriteAngle = Math.atan2(dy, dx) - player.dir;
+            while(spriteAngle < -Math.PI) spriteAngle += Math.PI * 2;
+            while(spriteAngle > Math.PI) spriteAngle -= Math.PI * 2;
+
+            if(Math.abs(spriteAngle) < FOV) {
+                const screenX = (0.5 * (spriteAngle / (FOV / 2)) + 0.5) * canvas.width;
+                const spriteSize = (TILE_SIZE * canvas.height) / dist;
+                
+                // Z-Check
+                const bufferIdx = Math.floor(screenX);
+                if(dist < zBuffer[bufferIdx] || !zBuffer[bufferIdx]) {
+                    const drawX = screenX - spriteSize / 2;
+                    const drawY = (canvas.height - spriteSize) / 2;
+                    
+                    if(s.type === 'enemy') {
+                        ctx.fillStyle = '#3a0000';
+                        ctx.fillRect(drawX, drawY, spriteSize, spriteSize);
+                        ctx.fillStyle = '#ff0000';
+                        ctx.fillRect(drawX + spriteSize*0.2, drawY + spriteSize*0.3, spriteSize*0.15, spriteSize*0.1);
+                        ctx.fillRect(drawX + spriteSize*0.65, drawY + spriteSize*0.3, spriteSize*0.15, spriteSize*0.1);
+                    } else if(s.type === 'bullet') {
+                        const bSize = spriteSize * 0.25;
+                        ctx.fillStyle = '#ffff00';
+                        ctx.fillRect(screenX - bSize/2, canvas.height/2 - bSize/2, bSize, bSize);
+                        // Bullet Glow
+                        ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+                        ctx.fillRect(screenX - bSize, canvas.height/2 - bSize, bSize*2, bSize*2);
+                    }
+                }
+            }
+        });
+    }
+
+    function gameOver(won) {
+        player.dead = true;
+        const overlay = document.getElementById('overlay');
+        overlay.style.display = 'flex';
+        overlay.innerHTML = `<h1 style="color:var(--ui-red)">${won ? 'MISSION ACCOMPLISHED' : 'YOU DIED'}</h1><p>${won ? 'The sector is clear.' : 'The monsters got you.'}</p><button class="start-btn" onclick="location.reload()">RETRY</button>`;
+    }
+
+    function resize() {
+        canvas.width = window.innerWidth / RES;
+        canvas.height = window.innerHeight / RES;
+    }
+
+    function gameLoop() {
+        update();
+        render();
+        requestAnimationFrame(gameLoop);
+    }
+
+    window.onload = () => {
+        resize();
+        setupControls();
+        window.addEventListener('resize', resize);
+        gameLoop();
+    };
+</script>
+</body>
+</html>
