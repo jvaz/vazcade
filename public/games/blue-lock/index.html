@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Blue Lock: Endless Striker</title>
+    <style>
+        :root {
+            --bl-blue: #00aaff;
+            --bl-dark: #050a14;
+            --bl-neon: #00f2ff;
+            --bl-red: #ff3e3e;
+            --bl-yellow: #ffee00;
+        }
+
+        * {
+            box-sizing: border-box;
+            touch-action: none;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background-color: var(--bl-dark);
+            color: white;
+            font-family: 'Segoe UI', sans-serif;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100%;
+            max-width: 500px;
+            height: 100%;
+            max-height: 900px;
+            background: #0a1a2f;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            border: 2px solid #111;
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            background-color: #0b1a10; 
+        }
+
+        /* UI elements */
+        #ui {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-between;
+            font-weight: 900;
+            font-size: 18px;
+            text-transform: uppercase;
+            text-shadow: 0 2px 4px rgba(0,0,0,1);
+        }
+        
+        #lives-container {
+            color: var(--bl-red);
+            font-size: 16px;
+            margin-top: 5px;
+            letter-spacing: 2px;
+            text-shadow: 0 0 5px rgba(255, 0, 0, 0.5);
+        }
+
+        .bar-container {
+            width: 120px;
+            height: 8px;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid #555;
+            margin-top: 5px;
+            transform: skewX(-20deg);
+        }
+        #ability-fill { width: 100%; height: 100%; background: var(--bl-neon); box-shadow: 0 0 8px var(--bl-neon); transition: width 0.1s linear; }
+        
+        /* Overlays */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 10, 20, 0.95);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 20;
+            text-align: center;
+        }
+
+        #char-select-overlay {
+            justify-content: flex-start;
+            padding-top: 15px;
+            display: none;
+            overflow-y: auto;
+        }
+
+        h1 {
+            font-size: 3rem;
+            color: var(--bl-neon);
+            font-style: italic;
+            margin: 0;
+            text-shadow: 0 0 20px var(--bl-blue);
+            letter-spacing: -2px;
+        }
+        
+        .sub-text { color: #aaa; margin-bottom: 30px; font-size: 0.9rem; }
+
+        .btn-start {
+            background: transparent;
+            border: 2px solid var(--bl-neon);
+            color: white;
+            padding: 15px 50px;
+            font-size: 1.2rem;
+            font-weight: bold;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: 0.2s;
+            clip-path: polygon(10% 0, 100% 0, 100% 70%, 90% 100%, 0 100%, 0 30%);
+            margin-top: 15px;
+        }
+        .btn-start:active { background: var(--bl-neon); color: black; }
+
+        /* Character Select Grid */
+        .char-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            width: 95%;
+            max-width: 320px;
+            margin-top: 10px;
+            padding-bottom: 30px;
+        }
+
+        .char-card {
+            background: #0a101f;
+            border: 1px solid #223;
+            border-radius: 6px;
+            padding: 6px 4px;
+            cursor: pointer;
+            transition: 0.2s;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .char-card:hover, .char-card:active {
+            border-color: var(--bl-neon);
+            transform: translateY(-2px);
+            box-shadow: 0 3px 10px rgba(0, 242, 255, 0.2);
+        }
+
+        .char-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 1px solid white;
+            margin-bottom: 3px;
+            box-shadow: 0 0 5px rgba(255,255,255,0.2);
+        }
+
+        .char-name {
+            font-size: 0.75rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-bottom: 1px;
+            letter-spacing: 0.5px;
+        }
+
+        .char-ability-text {
+            font-size: 0.5rem;
+            color: var(--bl-neon);
+            margin-bottom: 2px;
+            font-weight: bold;
+        }
+
+        .char-stats-info {
+            font-size: 0.55rem;
+            color: #888;
+            text-align: left;
+            width: 100%;
+            padding: 0 4px;
+        }
+        .char-stats-info div {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2px;
+        }
+        .stat-bar-bg {
+            width: 30px;
+            height: 3px;
+            background: #222;
+            border-radius: 2px;
+            overflow: hidden;
+            margin-left: 3px;
+        }
+        .stat-bar-fill {
+            height: 100%;
+            background: var(--bl-neon);
+        }
+
+        /* Controlos Mobile */
+        .touch-controls {
+            position: absolute;
+            bottom: 30px;
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            padding: 0 20px;
+            pointer-events: none;
+            z-index: 10;
+        }
+
+        #joystick-area {
+            width: 140px;
+            height: 140px;
+            position: relative;
+            pointer-events: auto;
+        }
+        
+        #joystick-base {
+            width: 100px;
+            height: 100px;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
+            position: absolute;
+            top: 20px; left: 20px;
+        }
+
+        #joystick-stick {
+            width: 50px;
+            height: 50px;
+            background: rgba(0, 170, 255, 0.5);
+            border: 2px solid var(--bl-blue);
+            border-radius: 50%;
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            box-shadow: 0 0 10px var(--bl-blue);
+        }
+
+        .action-buttons {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            pointer-events: auto;
+            justify-content: flex-end;
+            padding-bottom: 20px;
+        }
+
+        .btn-round {
+            width: 75px;
+            height: 75px;
+            border-radius: 50%;
+            border: none;
+            color: white;
+            font-weight: 900;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            user-select: none;
+            transition: transform 0.1s, background 0.2s;
+        }
+
+        #shoot-btn { 
+            background: radial-gradient(circle, var(--bl-blue) 0%, #004488 100%);
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        #shoot-btn:active { transform: scale(0.95); background: white; color: var(--bl-blue); }
+        
+        /* Estilo para quando o chuto está em Cooldown */
+        #shoot-btn.cooldown {
+            background: #333 !important;
+            color: #888 !important;
+            border-color: #222 !important;
+            pointer-events: none;
+            box-shadow: none;
+        }
+        
+        #skill-btn { 
+            background: #222; 
+            border: 2px solid var(--bl-neon);
+            color: var(--bl-neon);
+            width: 60px; height: 60px;
+            font-size: 12px;
+        }
+        #skill-btn:active, #skill-btn.active-skill { 
+            background: var(--bl-neon); 
+            color: black; 
+            transform: scale(0.95);
+            box-shadow: 0 0 15px var(--bl-neon);
+        }
+
+    </style>
+</head>
+<body>
+
+    <div id="game-container">
+        <div id="ui">
+            <div class="stats">
+                <div>
+                    <span style="color: var(--bl-blue)">Golos: <span id="score">0</span></span>
+                    <div id="lives-container">❤️❤️❤️❤️❤️</div>
+                </div>
+                <div style="text-align: right">
+                    <span id="ability-label" style="font-size: 11px; color: #aaa">Habilidade</span>
+                    <div class="bar-container"><div id="ability-fill"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="message-overlay" class="overlay">
+            <h1 id="overlay-title">BLUE LOCK</h1>
+            <p class="sub-text" id="overlay-desc">Tens 5 vidas.<br>Usa o teu trunfo [SKILL] para sobreviver.</p>
+            <button class="btn-start" onclick="showCharacterSelect()">ESCOLHER JOGADOR</button>
+        </div>
+
+        <div id="char-select-overlay" class="overlay">
+            <h1 style="font-size: 0.9rem; margin-bottom: 0px;">SELECIONA O TEU</h1>
+            <h1 style="font-size: 1.4rem; color: white; text-shadow: none;">AVANÇADO</h1>
+            <div class="char-grid" id="char-grid"></div>
+        </div>
+
+        <canvas id="gameCanvas"></canvas>
+
+        <div class="touch-controls">
+            <div id="joystick-area">
+                <div id="joystick-base"></div>
+                <div id="joystick-stick"></div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn-round" id="skill-btn">SKILL</button>
+                <button class="btn-round" id="shoot-btn">CHUTO</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const livesContainer = document.getElementById('lives-container');
+        const overlay = document.getElementById('message-overlay');
+        const charSelectOverlay = document.getElementById('char-select-overlay');
+        const abilityFill = document.getElementById('ability-fill');
+        const abilityLabel = document.getElementById('ability-label');
+        const skillBtn = document.getElementById('skill-btn');
+        const shootBtn = document.getElementById('shoot-btn');
+        const stick = document.getElementById('joystick-stick');
+        const base = document.getElementById('joystick-area');
+
+        function resize() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+        }
+        window.onresize = resize;
+        resize();
+
+        // Dados das Personagens
+        const characters = [
+            { id: 'isagi', name: 'Isagi', color: '#00aaff', speed: 1.2, shotSpeed: 16, abId: 'metavision', abName: 'Metavision', type: 'hold' },
+            { id: 'bachira', name: 'Bachira', color: '#ffee00', speed: 1.5, shotSpeed: 15, abId: 'monster', abName: 'Monstro', type: 'hold' },
+            { id: 'nagi', name: 'Nagi', color: '#e0e0e0', speed: 1.2, shotSpeed: 18, abId: 'freeze', abName: 'Genialidade', type: 'instant' },
+            { id: 'rin', name: 'Rin', color: '#00cf8d', speed: 1.3, shotSpeed: 17, abId: 'puppeteer', abName: 'Marionetista', type: 'hold' },
+            { id: 'sae', name: 'Sae', color: '#ff007f', speed: 1.3, shotSpeed: 19, abId: 'curve', abName: 'Curva Perfeita', type: 'instant' },
+            { id: 'barou', name: 'Barou', color: '#cc0000', speed: 1.0, shotSpeed: 21, abId: 'charge', abName: 'Carga do Rei', type: 'hold' },
+            { id: 'kunigami', name: 'Kunigami', color: '#ff6600', speed: 1.0, shotSpeed: 20, abId: 'hero', abName: 'Pé Esquerdo', type: 'instant' },
+            { id: 'chigiri', name: 'Chigiri', color: '#ff3399', speed: 1.7, shotSpeed: 14, abId: 'panther', abName: 'Vel. Máxima', type: 'hold' },
+            { id: 'shidou', name: 'Shidou', color: '#d900ff', speed: 1.4, shotSpeed: 19, abId: 'dragon', abName: 'Voo do Dragão', type: 'instant' },
+            { id: 'reo', name: 'Reo', color: '#8c00ff', speed: 1.3, shotSpeed: 16, abId: 'chameleon', abName: 'Camaleão', type: 'special' }
+        ];
+
+        // Variáveis de Jogo
+        let score = 0;
+        let lives = 5;
+        let gameActive = false;
+        let frameCount = 0;
+        
+        let invulnFrames = 0; 
+        let flashAlpha = 0; 
+        let flashColor = 'rgba(255, 255, 255, 1)';
+        let damageAlpha = 0; 
+        let damageMsg = ""; 
+        let difficultyMult = 1.0;
+        let grassOffset = 0; 
+        
+        // Cooldown do Chuto
+        let shotCooldownEndTime = 0;
+
+        // Sistema de Habilidades
+        let selectedCharIndex = 0;
+        let skillValue = 100;
+        let isSkillActive = false;
+        let currentAbility = null; 
+        let freezeTimer = 0;
+        let nextShotSpecial = null;
+        let activeAura = null;
+
+        // Física e Jogador
+        const player = { x: 0, y: 0, vx: 0, vy: 0, r: 16, accel: 1.2, maxSpeed: 6, friction: 0.82, color: '#00aaff', kickTimer: 0 };
+        
+        // Bola
+        const ball = { 
+            x: 0, y: 0, z: 0, r: 5, 
+            state: 'dribble', special: null,
+            speed: 15, dx: 0, dy: 0, vz: 0,
+            trail: []
+        };
+
+        // Guarda-Redes 
+        const goalkeeper = {
+            x: 0, y: 40, vx: 0, w: 40, h: 20,
+            baseSpeed: 0.8, friction: 0.85, maxSpeed: 8,
+            color: '#ffee00', state: 'idle'
+        };
+
+        const enemies = [];
+        const enemyCount = 4;
+
+        let joystick = { x: 0, y: 0, active: false };
+        const keys = {};
+        const keysHeld = {};
+
+        // --- GESTÃO DE HABILIDADES ---
+        
+        function setAbility(char) {
+            if (char.abId === 'chameleon') {
+                const randomChar = characters[Math.floor(Math.random() * 9)];
+                currentAbility = { id: randomChar.abId, name: 'Cópia: ' + randomChar.abName, type: randomChar.type, color: randomChar.color };
+                document.documentElement.style.setProperty('--bl-neon', randomChar.color);
+            } else {
+                currentAbility = { id: char.abId, name: char.abName, type: char.type, color: char.color };
+                document.documentElement.style.setProperty('--bl-neon', char.color);
+            }
+            abilityLabel.innerText = currentAbility.name + (currentAbility.type === 'instant' ? ' (CLIQUE)' : ' (MANTER)');
+        }
+
+        function triggerInstantAbility() {
+            if (skillValue < 50) return;
+            skillValue -= 50;
+            
+            const id = currentAbility.id;
+            
+            if (id === 'freeze') {
+                freezeTimer = 120; // 2 segundos
+                triggerFlash('rgba(255, 255, 255, 0.4)');
+            } else if (id === 'curve' || id === 'hero' || id === 'dragon') {
+                nextShotSpecial = id;
+                activeAura = currentAbility.color;
+                triggerFlash(currentAbility.color.replace(')', ', 0.3)').replace('rgb', 'rgba'));
+            }
+        }
+
+        function triggerFlash(colorStr) {
+            flashColor = colorStr;
+            flashAlpha = 0.6;
+        }
+
+        // --- CONTROLES ---
+
+        window.addEventListener('keydown', e => {
+            keys[e.code] = true;
+            if(["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault();
+            
+            if (e.code === 'ShiftLeft' && gameActive) {
+                if (currentAbility.type === 'instant' && !keysHeld['ShiftLeft']) {
+                    triggerInstantAbility();
+                } else if (currentAbility.type === 'hold') {
+                    isSkillActive = true;
+                    skillBtn.classList.add('active-skill');
+                }
+                keysHeld['ShiftLeft'] = true;
+            }
+
+            if (e.code === 'Space' && gameActive && !keysHeld['Space']) {
+                triggerShot();
+                keysHeld['Space'] = true;
+            }
+        });
+        window.addEventListener('keyup', e => {
+            keys[e.code] = false;
+            if (e.code === 'ShiftLeft') {
+                keysHeld['ShiftLeft'] = false;
+                isSkillActive = false;
+                skillBtn.classList.remove('active-skill');
+            }
+            if (e.code === 'Space') {
+                keysHeld['Space'] = false;
+            }
+        });
+
+        base.addEventListener('touchstart', e => { e.preventDefault(); joystick.active = true; handleJoystick(e); });
+        base.addEventListener('touchmove', e => { e.preventDefault(); handleJoystick(e); });
+        base.addEventListener('touchend', e => { e.preventDefault(); resetJoystick(); });
+
+        skillBtn.addEventListener('touchstart', (e) => { 
+            e.preventDefault(); 
+            if (!gameActive) return;
+            if (currentAbility.type === 'instant') {
+                triggerInstantAbility();
+            } else {
+                isSkillActive = true;
+                skillBtn.classList.add('active-skill');
+            }
+        });
+        skillBtn.addEventListener('touchend', (e) => { 
+            e.preventDefault(); 
+            isSkillActive = false; 
+            skillBtn.classList.remove('active-skill');
+        });
+        
+        shootBtn.addEventListener('touchstart', (e) => { e.preventDefault(); triggerShot(); });
+        shootBtn.addEventListener('mousedown', (e) => { e.preventDefault(); triggerShot(); });
+
+        function handleJoystick(e) {
+            if (!joystick.active) return;
+            const touch = e.touches[0];
+            const rect = base.getBoundingClientRect();
+            const centerX = rect.left + 70;
+            const centerY = rect.top + 70;
+            
+            let dx = touch.clientX - centerX;
+            let dy = touch.clientY - centerY;
+            const maxDist = 40;
+            const dist = Math.min(Math.sqrt(dx*dx + dy*dy), maxDist);
+            const angle = Math.atan2(dy, dx);
+
+            joystick.x = (Math.cos(angle) * dist) / maxDist;
+            joystick.y = (Math.sin(angle) * dist) / maxDist;
+
+            stick.style.transform = `translate(-50%, -50%) translate(${joystick.x * maxDist}px, ${joystick.y * maxDist}px)`;
+        }
+
+        function resetJoystick() {
+            joystick.active = false; joystick.x = 0; joystick.y = 0;
+            stick.style.transform = `translate(-50%, -50%)`;
+        }
+
+        function updateLivesUI() {
+            let hearts = "";
+            for(let i=0; i<lives; i++) hearts += "❤️";
+            for(let i=lives; i<5; i++) hearts += "🖤"; 
+            livesContainer.innerText = hearts;
+        }
+
+        function renderCharacterSelect() {
+            const grid = document.getElementById('char-grid');
+            grid.innerHTML = '';
+
+            characters.forEach((char, index) => {
+                const speedPct = (char.speed / 2.0) * 100; 
+                const shotPct = (char.shotSpeed / 22) * 100;
+
+                const card = document.createElement('div');
+                card.className = 'char-card';
+                card.onclick = () => selectCharacter(index);
+                card.innerHTML = `
+                    <div class="char-color" style="background-color: ${char.color};"></div>
+                    <div class="char-name" style="color: ${char.color};">${char.name}</div>
+                    <div class="char-ability-text">${char.abName}</div>
+                    <div class="char-stats-info">
+                        <div>
+                            <span>Vel.</span>
+                            <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${speedPct}%; background-color: ${char.color};"></div></div>
+                        </div>
+                        <div>
+                            <span>Rem.</span>
+                            <div class="stat-bar-bg"><div class="stat-bar-fill" style="width: ${shotPct}%; background-color: ${char.color};"></div></div>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        function showCharacterSelect() {
+            overlay.style.display = 'none';
+            charSelectOverlay.style.display = 'flex';
+            charSelectOverlay.scrollTop = 0;
+            renderCharacterSelect();
+        }
+
+        function selectCharacter(index) {
+            selectedCharIndex = index;
+            const char = characters[index];
+            player.color = char.color;
+            player.accel = char.speed; 
+            ball.speed = char.shotSpeed; 
+            
+            shootBtn.style.background = `radial-gradient(circle, ${char.color} 0%, #111 100%)`;
+            document.documentElement.style.setProperty('--bl-blue', char.color);
+            skillBtn.style.borderColor = char.color;
+            skillBtn.style.color = char.color;
+
+            startGame();
+        }
+
+        function resetPlay(isGoal) {
+            player.x = canvas.width / 2;
+            player.y = canvas.height - 150; 
+            player.vx = 0; player.vy = 0;
+            player.kickTimer = 0;
+            
+            ball.state = 'dribble';
+            ball.z = 0;
+            ball.vz = 0;
+            ball.special = null;
+            ball.trail = []; 
+            nextShotSpecial = null;
+            activeAura = null;
+            
+            // REMOVE O COOLDOWN IMEDIATAMENTE (Quer seja Golo ou Dano)
+            shotCooldownEndTime = 0; 
+            
+            goalkeeper.x = canvas.width / 2;
+            goalkeeper.vx = 0;
+            goalkeeper.state = 'idle';
+            
+            enemies.forEach(en => {
+                en.x = Math.random() * (canvas.width - 60) + 30;
+                en.y = Math.random() * -400 - 200; 
+                en.vx = 0; en.vy = 0;
+            });
+
+            invulnFrames = isGoal ? 60 : 90; 
+            
+            if (characters[selectedCharIndex].abId === 'chameleon') {
+                setAbility(characters[selectedCharIndex]);
+            }
+        }
+
+        function initMatch() {
+            difficultyMult = 1.0;
+            flashAlpha = 0;
+            damageAlpha = 0;
+            
+            shotCooldownEndTime = 0;
+            shootBtn.classList.remove('cooldown');
+            shootBtn.innerText = 'CHUTO';
+            
+            enemies.length = 0;
+            for (let i = 0; i < enemyCount; i++) {
+                enemies.push({
+                    x: 0, y: 0, vx: 0, vy: 0, r: 16, 
+                    accel: 0.3 + Math.random() * 0.2,
+                    maxSpeed: 2.5 + Math.random() * 1.5
+                });
+            }
+            
+            setAbility(characters[selectedCharIndex]);
+            resetPlay(true);
+        }
+
+        function startGame() {
+            score = 0; 
+            lives = 5;
+            scoreEl.innerText = score;
+            updateLivesUI();
+            skillValue = 100;
+            initMatch();
+            gameActive = true;
+            charSelectOverlay.style.display = 'none';
+            requestAnimationFrame(update); 
+        }
+
+        function triggerShot() {
+            if (!gameActive || ball.state !== 'dribble') return;
+            
+            // Verificação do Cooldown
+            if (Date.now() < shotCooldownEndTime) return;
+            
+            shotCooldownEndTime = Date.now() + 5000;
+            
+            // Ativa a animação do pé do jogador (dura 15 frames)
+            player.kickTimer = 15;
+            
+            ball.state = 'shot';
+            ball.dy = -1;
+            ball.z = 0;
+            
+            ball.vz = 2.8; 
+            ball.dx = 0;
+            ball.speed = characters[selectedCharIndex].shotSpeed; 
+
+            if (joystick.active) {
+                ball.dx = joystick.x * 0.6; 
+            } else {
+                if (keys['ArrowLeft'] || keys['KeyA']) ball.dx = -0.4;
+                if (keys['ArrowRight'] || keys['KeyD']) ball.dx = 0.4;
+            }
+            
+            ball.dx += player.vx * 0.06; 
+
+            ball.special = nextShotSpecial;
+            if (ball.special === 'hero') {
+                ball.speed = 30; 
+                ball.vz = 0.5; 
+                ball.dx = 0; 
+            } else if (ball.special === 'dragon') {
+                ball.vz = 6.0; 
+                ball.speed = 12; 
+            } else if (ball.special === 'curve') {
+                ball.vz = 1.5; 
+                ball.speed = 17; 
+            }
+
+            nextShotSpecial = null;
+            activeAura = null;
+        }
+
+        function loseLife(reason) {
+            if (invulnFrames > 0) return; 
+
+            lives--;
+            updateLivesUI();
+            
+            if (lives <= 0) {
+                gameActive = false;
+                overlay.style.display = 'flex';
+                document.getElementById('overlay-title').innerText = "LOCK OFF";
+                document.getElementById('overlay-title').style.color = "var(--bl-red)";
+                document.getElementById('overlay-desc').innerText = `Ficaste sem vidas! (${reason})\nGolos totais: ${score}`;
+                document.querySelector('.btn-start').innerText = "MUDAR JOGADOR";
+                document.querySelector('.btn-start').onclick = showCharacterSelect;
+            } else {
+                damageAlpha = 1.0;
+                damageMsg = reason;
+                resetPlay(false); 
+            }
+        }
+
+        // --- RENDERIZAÇÃO ---
+
+        function drawPitch() {
+            ctx.fillStyle = '#0a2114';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.fillStyle = '#0e2b1b';
+            grassOffset = (grassOffset + (player.vy * -0.5)) % 80; 
+            for(let i = -80; i < canvas.height + 80; i += 80) {
+                ctx.fillRect(0, i + grassOffset, canvas.width, 40);
+            }
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+            ctx.lineWidth = 2;
+            
+            ctx.strokeRect(15, -100, canvas.width - 30, canvas.height + 200);
+            
+            const goalWidth = 140;
+            const penaltyWidth = 240;
+            ctx.strokeRect(canvas.width/2 - penaltyWidth/2, 0, penaltyWidth, 120);
+            ctx.strokeRect(canvas.width/2 - goalWidth/2, 0, goalWidth, 45);
+            
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, 120, 50, 0, Math.PI);
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.arc(canvas.width/2, 90, 2, 0, Math.PI*2);
+            ctx.fillStyle = 'rgba(255,255,255,0.8)';
+            ctx.fill();
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.fillRect(canvas.width/2 - goalWidth/2, 0, goalWidth, 40);
+        }
+
+        // Função para desenhar personagens com braços e pernas
+        function drawCharacter(x, y, color, isPlayer, vx, vy, kickProgress = 0) {
+            if (isPlayer && invulnFrames > 0 && Math.floor(frameCount / 10) % 2 === 0) return; 
+
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.rotate(vx * 0.05);
+
+            const isMoving = Math.abs(vx) > 0.1 || Math.abs(vy) > 0.1;
+            const bob = Math.sin(frameCount * 0.3 + (isPlayer ? 0 : x)) * (Math.abs(vy) + Math.abs(vx)) * 0.5;
+
+            // Sombra
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.beginPath(); ctx.ellipse(0, 12, 16, 6, 0, 0, Math.PI*2); ctx.fill();
+
+            // Aura de Habilidade
+            if (isPlayer && (activeAura || (isSkillActive && currentAbility.type === 'hold'))) {
+                const auraColor = activeAura || currentAbility.color;
+                ctx.fillStyle = auraColor.replace(')', ', 0.4)').replace('rgb', 'rgba');
+                ctx.beginPath(); ctx.ellipse(0, 10, 25, 12, 0, 0, Math.PI*2); ctx.fill();
+            }
+
+            // --- Lógica de Pernas e Animação de Chuto ---
+            const time = frameCount * 0.4;
+            let leftLegY = isMoving ? Math.sin(time) * 5 : 0;
+            let rightLegY = isMoving ? Math.cos(time) * 5 : 0;
+            let rightLegX = 5;
+            let leftLegX = -5;
+
+            // Animação de Chuto
+            if (kickProgress > 0) {
+                const extension = Math.sin(kickProgress * Math.PI) * 18; 
+                rightLegY -= extension; 
+                if (ball.state === 'shot') {
+                    rightLegX += (ball.dx * 12) * Math.sin(kickProgress * Math.PI); 
+                }
+            }
+
+            // Sapatos/Chuteiras
+            ctx.fillStyle = isPlayer ? '#fff' : '#111';
+            ctx.beginPath(); ctx.ellipse(leftLegX, leftLegY + 10 + bob, 4, 6, 0, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(rightLegX, rightLegY + 10 + bob, 4, 6, 0, 0, Math.PI*2); ctx.fill();
+
+            // --- Braços ---
+            const armSwing = isMoving ? Math.sin(time) * 4 : 0;
+            
+            // Mangas
+            ctx.fillStyle = color; 
+            ctx.beginPath(); ctx.ellipse(-13, bob - armSwing + 2, 4, 6, -0.3, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(13, bob + armSwing + 2, 4, 6, 0.3, 0, Math.PI*2); ctx.fill();
+            
+            // Mãos
+            ctx.fillStyle = '#ffccaa';
+            ctx.beginPath(); ctx.arc(-14, bob - armSwing + 8, 3, 0, Math.PI*2); ctx.fill();
+            ctx.beginPath(); ctx.arc(14, bob + armSwing + 8, 3, 0, Math.PI*2); ctx.fill();
+
+            // --- Corpo ---
+            ctx.fillStyle = isPlayer && currentAbility.id === 'monster' && isSkillActive ? 'rgba(255, 238, 0, 0.7)' : color;
+            ctx.beginPath(); ctx.ellipse(0, bob, 14, 11, 0, 0, Math.PI*2); ctx.fill();
+
+            // Rosto
+            ctx.fillStyle = '#ffccaa';
+            ctx.beginPath(); ctx.arc(0, -6 + bob, 8, 0, Math.PI*2); ctx.fill();
+            
+            // Cabelo
+            ctx.fillStyle = isPlayer ? '#111' : '#300';
+            ctx.beginPath(); ctx.arc(0, -8 + bob, 8, Math.PI - 0.5, Math.PI*2 + 0.5); ctx.fill();
+
+            ctx.restore();
+        }
+
+        // Guarda-redes
+        function drawKeeper(x, y, state, vx) {
+            ctx.save();
+            ctx.translate(x, y);
+            ctx.fillStyle = 'rgba(0,0,0,0.5)';
+            ctx.beginPath(); ctx.ellipse(0, 10, goalkeeper.w/2 + 5, 8, 0, 0, Math.PI*2); ctx.fill();
+
+            ctx.fillStyle = goalkeeper.color;
+            if (state === 'dive') {
+                const stretch = Math.abs(vx) * 1.8;
+                ctx.rotate(vx > 0 ? 0.3 : -0.3);
+                ctx.fillRect(-goalkeeper.w/2 - stretch, -8, goalkeeper.w + stretch*2, 16);
+                
+                // Pés
+                ctx.fillStyle = '#111';
+                ctx.beginPath(); ctx.arc(vx > 0 ? -goalkeeper.w/2 - stretch : goalkeeper.w/2 + stretch, 4, 5, 0, Math.PI*2); ctx.fill();
+
+                // Luvas esticadas
+                ctx.fillStyle = 'white';
+                ctx.beginPath(); ctx.arc(vx > 0 ? goalkeeper.w/2 + stretch + 4 : -goalkeeper.w/2 - stretch - 4, 0, 6, 0, Math.PI*2); ctx.fill();
+            } else {
+                ctx.fillRect(-goalkeeper.w/2, -10, goalkeeper.w, 20);
+                
+                // Pernas a mover de lado
+                const isMoving = Math.abs(vx) > 0.5;
+                const legBob = isMoving ? Math.sin(frameCount * 0.4) * 3 : 0;
+                ctx.fillStyle = '#111';
+                ctx.beginPath(); ctx.ellipse(-8, 12 - legBob, 4, 5, 0, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.ellipse(8, 12 + legBob, 4, 5, 0, 0, Math.PI*2); ctx.fill();
+
+                // Luvas em repouso
+                ctx.fillStyle = 'white';
+                ctx.beginPath(); ctx.arc(-goalkeeper.w/2 - 4, 0, 6, 0, Math.PI*2); ctx.fill();
+                ctx.beginPath(); ctx.arc(goalkeeper.w/2 + 4, 0, 6, 0, Math.PI*2); ctx.fill(); 
+            }
+            
+            ctx.fillStyle = '#ffccaa';
+            ctx.beginPath(); ctx.arc(0, -12, 9, 0, Math.PI*2); ctx.fill();
+            ctx.restore();
+        }
+
+        function drawFireTrail(b) {
+            if (!b.trail || b.trail.length === 0) return;
+            
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            
+            for (let p of b.trail) {
+                const displayY = p.y - (p.z * 2.5);
+                const r = 255;
+                const g = Math.max(0, Math.floor(255 * (p.life - 0.2)));
+                const bCol = Math.max(0, Math.floor(255 * (p.life - 0.6)));
+                
+                ctx.fillStyle = `rgba(${r}, ${g}, ${bCol}, ${p.life * 0.8})`;
+                ctx.beginPath(); ctx.arc(p.x, displayY, p.size, 0, Math.PI * 2); ctx.fill();
+            }
+            
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.restore();
+        }
+
+        function drawBall(b) {
+            ctx.fillStyle = `rgba(0,0,0, ${Math.max(0.1, 0.5 - (b.z * 0.05))})`;
+            const shadowRadius = b.r + (b.z * 0.2);
+            ctx.beginPath(); ctx.ellipse(b.x, b.y, shadowRadius, shadowRadius * 0.6, 0, 0, Math.PI*2); ctx.fill();
+
+            const displayY = b.y - (b.z * 2.5);
+            const displayRadius = b.r + (b.z * 0.15); 
+
+            ctx.save();
+            ctx.translate(b.x, displayY);
+            
+            if (b.state === 'shot') {
+                ctx.fillStyle = `rgba(255, 255, 255, 0.2)`;
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(-b.dx * 12, -b.dy * 12 + b.vz * 4);
+                ctx.lineWidth = displayRadius;
+                
+                if (b.special === 'hero') ctx.strokeStyle = '#ff6600';
+                else if (b.special === 'dragon') ctx.strokeStyle = '#d900ff';
+                else if (b.special === 'curve') ctx.strokeStyle = '#ff007f';
+                else ctx.strokeStyle = player.color; 
+                
+                ctx.stroke();
+            }
+
+            ctx.beginPath(); ctx.arc(0, 0, displayRadius, 0, Math.PI*2);
+            if (b.special === 'hero') ctx.fillStyle = '#ff9900';
+            else ctx.fillStyle = 'white'; 
+            ctx.fill();
+            
+            ctx.fillStyle = '#222';
+            const spin = frameCount * (b.state === 'shot' ? 0.5 : 0.1);
+            ctx.beginPath(); 
+            ctx.arc(Math.cos(spin)*2, Math.sin(spin)*2, displayRadius*0.4, 0, Math.PI*2); 
+            ctx.fill();
+            ctx.strokeStyle = '#111'; ctx.lineWidth = 1; ctx.stroke();
+            
+            ctx.restore();
+        }
+
+        // --- LÓGICA PRINCIPAL (UPDATE) ---
+
+        function update() {
+            if (!gameActive) return; 
+            
+            frameCount++;
+            if (invulnFrames > 0) invulnFrames--;
+            if (freezeTimer > 0) freezeTimer--;
+            
+            // Avança a animação do chuto do jogador
+            if (player.kickTimer > 0) player.kickTimer--;
+
+            // --- ATUALIZAÇÃO DO COOLDOWN NA INTERFACE ---
+            const now = Date.now();
+            if (now < shotCooldownEndTime) {
+                const timeLeft = ((shotCooldownEndTime - now) / 1000).toFixed(1);
+                shootBtn.innerText = timeLeft + 's';
+                if (!shootBtn.classList.contains('cooldown')) shootBtn.classList.add('cooldown');
+            } else {
+                if (shootBtn.classList.contains('cooldown')) {
+                    shootBtn.innerText = 'CHUTO';
+                    shootBtn.classList.remove('cooldown');
+                }
+            }
+
+            let timeScale = 1.0;
+            let playerAccelMod = 1.0;
+            let playerMaxSpeedMod = 1.0;
+
+            if (isSkillActive && currentAbility.type === 'hold' && skillValue > 0) {
+                skillValue -= 0.8;
+                switch (currentAbility.id) {
+                    case 'metavision': timeScale = 0.4; playerAccelMod = 1.5; break;
+                    case 'monster': invulnFrames = 2; playerAccelMod = 1.8; player.vx += player.vx > 0 ? 0.3 : -0.3; break;
+                    case 'puppeteer':
+                        enemies.forEach(en => {
+                            const dx = player.x - en.x, dy = player.y - en.y, dist = Math.hypot(dx, dy);
+                            if (dist < 120 && dist > 0) { en.vx -= (dx / dist) * 1.5; en.vy -= (dy / dist) * 1.5; }
+                        });
+                        break;
+                    case 'charge':
+                        enemies.forEach(en => {
+                            if (Math.hypot(player.x - en.x, player.y - en.y) < player.r + en.r + 5) {
+                                en.y = -100 - Math.random() * 200;
+                                triggerFlash('rgba(204, 0, 0, 0.3)');
+                            }
+                        });
+                        break;
+                    case 'panther': playerAccelMod = 3.0; playerMaxSpeedMod = 2.0; break;
+                }
+            } else {
+                isSkillActive = false;
+                skillBtn.classList.remove('active-skill');
+                if (skillValue < 100) skillValue += 0.3; 
+            }
+            abilityFill.style.width = skillValue + '%';
+
+            if (!ball.trail) ball.trail = [];
+            for (let i = ball.trail.length - 1; i >= 0; i--) {
+                let p = ball.trail[i];
+                p.life -= 0.05; p.size *= 0.92; p.y -= 0.8; p.x += (Math.random() - 0.5) * 1.5; 
+                if (p.life <= 0) ball.trail.splice(i, 1);
+            }
+
+            const isCharged = isSkillActive || ball.special !== null || activeAura !== null;
+            if (isCharged && frameCount % 2 === 0) { 
+                ball.trail.push({ x: ball.x + (Math.random() - 0.5) * 6, y: ball.y + (Math.random() - 0.5) * 6, z: ball.z, life: 1.0, size: ball.r * 1.8 });
+                if (ball.state === 'shot') {
+                    ball.trail.push({ x: ball.x + (Math.random() - 0.5) * 12, y: ball.y + (Math.random() - 0.5) * 12, z: ball.z, life: 0.8, size: ball.r * 1.4 });
+                }
+            }
+
+            let inputX = 0, inputY = 0;
+            if (joystick.active) {
+                inputX = joystick.x; inputY = joystick.y;
+            } else {
+                if (keys['ArrowLeft'] || keys['KeyA']) inputX = -1;
+                if (keys['ArrowRight'] || keys['KeyD']) inputX = 1;
+                if (keys['ArrowUp'] || keys['KeyW']) inputY = -1;
+                if (keys['ArrowDown'] || keys['KeyS']) inputY = 1;
+            }
+
+            const len = Math.hypot(inputX, inputY);
+            if (len > 1) { inputX /= len; inputY /= len; }
+
+            player.vx += inputX * player.accel * playerAccelMod * (timeScale < 1 ? 1.5 : 1.0);
+            player.vy += inputY * player.accel * playerAccelMod * (timeScale < 1 ? 1.5 : 1.0);
+
+            const currentSpeed = Math.hypot(player.vx, player.vy);
+            const maxSpd = player.maxSpeed * playerMaxSpeedMod * (timeScale < 1 ? 0.8 : 1.0);
+            if (currentSpeed > maxSpd) {
+                player.vx = (player.vx / currentSpeed) * maxSpd;
+                player.vy = (player.vy / currentSpeed) * maxSpd;
+            }
+
+            player.vx *= player.friction;
+            player.vy *= player.friction;
+
+            player.x += player.vx;
+            player.y += player.vy;
+
+            player.x = Math.max(20, Math.min(canvas.width-20, player.x));
+            player.y = Math.max(120, Math.min(canvas.height-20, player.y)); 
+
+            if (ball.state === 'dribble') {
+                const dribbleX = Math.sin(frameCount * 0.3) * (Math.abs(player.vx) + 2);
+                ball.x = player.x + dribbleX;
+                ball.y = player.y - 18;
+                ball.z = 0; 
+            } else if (ball.state === 'shot') {
+                if (ball.special === 'curve') {
+                    const goalCenter = canvas.width / 2;
+                    if (ball.x < goalCenter - 10) ball.dx += 0.08 * timeScale;
+                    if (ball.x > goalCenter + 10) ball.dx -= 0.08 * timeScale;
+                }
+
+                ball.x += ball.dx * ball.speed * timeScale;
+                ball.y += ball.dy * ball.speed * timeScale;
+                
+                ball.z += ball.vz * timeScale;
+                ball.vz -= 0.12 * timeScale; 
+                
+                if (ball.z <= 0) {
+                    ball.z = 0;
+                    ball.vz = Math.abs(ball.vz) * 0.3; 
+                    ball.speed *= 0.98; 
+                }
+
+                if (ball.x < 15 || ball.x > canvas.width - 15) {
+                    ball.dx *= -0.8; 
+                    ball.x = Math.max(15, Math.min(canvas.width-15, ball.x));
+                }
+                
+                // LÓGICA DO GOLO / FALHA AQUI
+                if (ball.y <= 40) {
+                    if (ball.x > canvas.width/2 - 70 && ball.x < canvas.width/2 + 70) {
+                        if (ball.z < 38 || ball.special === 'dragon') { 
+                            score++;
+                            scoreEl.innerText = score;
+                            triggerFlash('rgba(0, 242, 255, 0.8)'); 
+                            difficultyMult += 0.10; 
+                            resetPlay(true); // O resetPlay(true) agora limpa o cooldown
+                        } else {
+                            loseLife("Atiraste por cima da barra!");
+                        }
+                    } else {
+                         loseLife("Remate ao lado!");
+                    }
+                } else if (ball.speed < 1) {
+                     loseLife("Remate fraco, a bola parou.");
+                }
+            }
+
+            const targetX = ball.x;
+            const gkDist = targetX - goalkeeper.x;
+            
+            if (ball.state === 'shot' && ball.y < canvas.height/2) {
+                goalkeeper.vx += Math.sign(gkDist) * goalkeeper.baseSpeed * difficultyMult * 2 * timeScale;
+                goalkeeper.state = Math.abs(goalkeeper.vx) > 3 ? 'dive' : 'idle';
+            } else {
+                goalkeeper.vx += Math.sign(gkDist) * goalkeeper.baseSpeed * 0.5;
+                goalkeeper.state = 'idle';
+            }
+            
+            goalkeeper.vx *= goalkeeper.friction;
+            goalkeeper.x += goalkeeper.vx;
+            goalkeeper.x = Math.max(canvas.width/2 - 60, Math.min(canvas.width/2 + 60, goalkeeper.x));
+
+            if (ball.state === 'shot' && ball.z < 25) {
+                if (ball.special !== 'hero' && !(ball.special === 'dragon' && ball.z > 15)) {
+                    const reach = goalkeeper.state === 'dive' ? 26 : 18;
+                    if (ball.x > goalkeeper.x - reach && ball.x < goalkeeper.x + reach &&
+                        ball.y > goalkeeper.y - 10 && ball.y < goalkeeper.y + 15) {
+                        loseLife("Grande Defesa do Guarda-Redes!");
+                    }
+                }
+            }
+
+            enemies.forEach(en => {
+                if (freezeTimer > 0) return;
+
+                const dx = player.x - en.x;
+                const dy = player.y - en.y;
+                const distToPlayer = Math.hypot(dx, dy);
+                
+                if (distToPlayer > 0) {
+                    en.vx += (dx / distToPlayer) * en.accel * difficultyMult * timeScale;
+                    en.vy += (dy / distToPlayer) * en.accel * difficultyMult * timeScale;
+                }
+                
+                en.vy += 0.2 * difficultyMult * timeScale; 
+
+                const enSpeed = Math.hypot(en.vx, en.vy);
+                const maxEnSpd = en.maxSpeed * difficultyMult * timeScale;
+                if (enSpeed > maxEnSpd) {
+                    en.vx = (en.vx / enSpeed) * maxEnSpd;
+                    en.vy = (en.vy / enSpeed) * maxEnSpd;
+                }
+                
+                en.vx *= 0.9; en.vy *= 0.9;
+                en.x += en.vx; en.y += en.vy;
+
+                if (en.y > canvas.height + 50) {
+                    en.y = -100 - Math.random() * 200;
+                    en.x = Math.random() * (canvas.width - 60) + 30;
+                    en.vx = 0; en.vy = 0;
+                }
+                
+                if (distToPlayer < player.r + en.r && invulnFrames <= 0) {
+                    if (currentAbility.id !== 'charge' || !isSkillActive) { 
+                        loseLife("Desarmado brutalmente!");
+                        return; 
+                    }
+                }
+                
+                if (ball.state === 'shot' && ball.z < 15 && ball.special !== 'hero') {
+                    const ballDist = Math.hypot(ball.x - en.x, ball.y - en.y);
+                    if (ballDist < ball.r + en.r) {
+                        loseLife("Remate cortado pela defesa!");
+                        return;
+                    }
+                }
+            });
+
+            // --- RENDERIZAR TODOS ---
+            drawPitch();
+            drawKeeper(goalkeeper.x, goalkeeper.y, goalkeeper.state, goalkeeper.vx);
+            
+            const charactersToDraw = [
+                { type: 'player', obj: player },
+                ...enemies.map(e => ({ type: 'enemy', obj: e }))
+            ].sort((a, b) => a.obj.y - b.obj.y);
+
+            charactersToDraw.forEach(item => {
+                if (item.type === 'player') {
+                    const kickProg = player.kickTimer > 0 ? (player.kickTimer / 15) : 0;
+                    drawCharacter(item.obj.x, item.obj.y, item.obj.color, true, item.obj.vx, item.obj.vy, kickProg);
+                } else {
+                    const enColor = freezeTimer > 0 ? '#44ccff' : '#ff3e3e'; 
+                    drawCharacter(item.obj.x, item.obj.y, enColor, false, item.obj.vx, item.obj.vy, 0);
+                }
+            });
+
+            drawFireTrail(ball); 
+            drawBall(ball);      
+
+            if (flashAlpha > 0) {
+                ctx.fillStyle = flashColor.replace(/[\d.]+\)$/g, `${flashAlpha * 0.5})`);
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                if (flashColor.includes('242')) {
+                    ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha})`;
+                    ctx.font = "italic 900 60px 'Segoe UI'";
+                    ctx.textAlign = "center";
+                    ctx.textBaseline = "middle";
+                    ctx.shadowColor = "rgba(0,0,0,0.8)";
+                    ctx.shadowBlur = 10;
+                    ctx.fillText("GOLO!", canvas.width / 2, canvas.height / 2);
+                    ctx.shadowBlur = 0; 
+                }
+                flashAlpha -= 0.03; 
+            }
+
+            if (damageAlpha > 0) {
+                ctx.fillStyle = `rgba(255, 62, 62, ${damageAlpha * 0.3})`;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.fillStyle = `rgba(255, 62, 62, ${damageAlpha})`;
+                ctx.font = "bold 24px 'Segoe UI'";
+                ctx.textAlign = "center";
+                ctx.textBaseline = "middle";
+                ctx.shadowColor = "rgba(0,0,0,0.8)";
+                ctx.shadowBlur = 5;
+                ctx.fillText(damageMsg, canvas.width / 2, canvas.height / 2);
+                ctx.shadowBlur = 0; 
+                damageAlpha -= 0.03; 
+            }
+
+            requestAnimationFrame(update);
+        }
+    </script>
+</body>
+</html>
