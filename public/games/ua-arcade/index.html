@@ -1,0 +1,1018 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UA Aerial Training Arcade - TURBO</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; background: #000; overflow: hidden; font-family: 'Press Start 2P', monospace; color: white; user-select: none; touch-action: none; }
+        canvas { display: block; width: 100%; height: 100%; }
+        .screen { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 50; }
+        .hidden { display: none !important; }
+        button { background: #3b82f6; color: white; border: 2px solid #60a5fa; padding: 15px; font-family: inherit; font-size: 12px; cursor: pointer; text-transform: uppercase; margin-top: 20px; transition: transform 0.1s; }
+        button:active { transform: scale(0.95); }
+        button:disabled { background: #374151; border-color: #4b5563; color: #9ca3af; cursor: not-allowed; }
+        .grid { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; max-width: 800px; padding: 20px; }
+        .char-card, .upgrade-card { background: #111; border: 2px solid #333; padding: 15px; width: 140px; text-align: center; cursor: pointer; position: relative; display: flex; flex-direction: column; gap: 8px; }
+        .char-card.selected, .upgrade-card:hover { border-color: #fbbf24; background: #222; }
+        .char-card.locked { opacity: 0.5; filter: grayscale(1); }
+        .char-icon { width: 50px; height: 50px; margin: 0 auto; border-radius: 5px; }
+        .char-name { font-size: 10px; color: #fbbf24; }
+        .char-type { font-size: 8px; color: #aaa; white-space: pre-line; }
+        .lock-overlay { position: absolute; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; color: #ef4444; font-size: 10px; font-weight: bold; border: 2px solid #ef4444; }
+        .hud-text { position: absolute; font-size: 12px; z-index: 40; text-shadow: 2px 2px 0 #000; }
+        #score-display { top: 20px; left: 20px; }
+        #token-hud, #menu-token-display { top: 20px; right: 20px; color: #fbbf24; }
+        #sync-status { top: 40px; right: 20px; font-size: 8px; color: #aaa; }
+        #heat-container { position: absolute; bottom: 20px; left: 20px; width: 200px; height: 15px; border: 2px solid #fff; background: #222; z-index: 40; }
+        #heat-bar { width: 0%; height: 100%; background: #f97316; transition: width 0.1s linear, background 0.3s; }
+        #hud-hero-name { position: absolute; bottom: 20px; left: 0; font-size: 10px; }
+        #ultra-btn { position: absolute; bottom: 20px; right: 20px; width: 60px; height: 60px; border-radius: 50%; border: 4px solid #444; background: #111; z-index: 40; display: flex; align-items: center; justify-content: center; font-size: 8px; color: #555; overflow: hidden; }
+        #ultra-btn.ready { border-color: #facc15; color: #facc15; box-shadow: 0 0 15px #facc15; animation: pulse 1s infinite; }
+        #ultra-btn.active { border-color: #ef4444; color: #ef4444; box-shadow: 0 0 20px #ef4444; }
+        #ultra-gauge-fill { position: absolute; bottom: 0; left: 0; width: 0%; height: 100%; background: rgba(250, 204, 21, 0.3); z-index: -1; }
+        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.05); } 100% { transform: scale(1); } }
+        .center-message { position: absolute; top: 30%; left: 50%; transform: translate(-50%, -50%); z-index: 45; text-align: center; text-shadow: 3px 3px 0 #000; display: none; }
+        #start-message { font-size: 40px; color: #facc15; }
+        #overheat-warning { font-size: 20px; color: #ef4444; animation: blink 0.5s infinite; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+        #combo-display { top: 20%; font-size: 16px; color: #a855f7; }
+        #combo-count { font-size: 32px; color: #d8b4fe; display: block; margin-top: 5px; transition: transform 0.1s; }
+        .level-pip { display: inline-block; width: 8px; height: 8px; background: #333; margin: 0 2px; }
+        .level-pip.active { background: #10b981; }
+        .upgrade-level { margin: 5px 0; }
+        .upgrade-desc { font-size: 8px; color: #aaa; margin-bottom: 5px; }
+        .upgrade-price { font-size: 10px; color: #fbbf24; }
+    </style>
+</head>
+<body>
+    <!-- Game Canvas -->
+    <canvas id="gameCanvas"></canvas>
+   
+    <!-- HUD Elements -->
+    <div id="score-display" class="hud-text">SCORE<br>000000</div>
+    <div id="token-hud" class="hud-text">TOKENS: 0</div>
+    <div id="sync-status" class="hud-text">OFFLINE</div>
+   
+    <div id="heat-container">
+        <div id="hud-hero-name">HERO</div>
+        <div id="heat-bar"></div>
+    </div>
+   
+    <div id="ultra-btn" onclick="window.triggerSpecial(event)">
+        <div id="ultra-gauge-fill"></div>
+        ULTRA
+    </div>
+   
+    <!-- Central Notifications -->
+    <div id="start-message" class="center-message">READY</div>
+    <div id="overheat-warning" class="center-message">OVERHEAT!</div>
+    <div id="combo-display" class="center-message">COMBO<span id="combo-count">x1</span></div>
+    <div id="new-record-msg" class="center-message" style="color:#10b981;">NEW WEEKLY RECORD!</div>
+
+    <!-- UI Screens -->
+    <div id="loading-screen" class="screen">
+        <h1 style="color:#fbbf24">UA AERIAL ARCADE</h1>
+        <p>SYNCING DATA...</p>
+    </div>
+   
+    <div id="starter-select-screen" class="screen" style="display:none;">
+        <h2 style="color:#60a5fa">CHOOSE YOUR STARTER</h2>
+        <div id="starter-grid" class="grid"></div>
+        <div id="starter-desc" style="height: 20px; font-size: 10px; margin-top: 10px;">Select a hero to begin.</div>
+        <button id="starter-action-btn" disabled onclick="window.confirmStarter()">SELECT HERO</button>
+    </div>
+   
+    <div id="char-select-screen" class="screen" style="display:none;">
+        <div id="menu-token-display" style="position:absolute; top:20px; right:20px; font-size:12px; color:#fbbf24;">TOKENS: 0</div>
+        <h2 style="color:#60a5fa">HERO ROSTER</h2>
+        <div id="char-grid" class="grid" style="max-height: 50vh; overflow-y: auto;"></div>
+        <div id="shop-desc" style="height: 20px; font-size: 10px; margin-top: 10px; color: #fbbf24;">SELECT A HERO</div>
+        <div style="display: flex; gap: 10px;">
+            <button id="shop-action-btn" disabled onclick="window.confirmShopSelection()">START MISSION</button>
+            <button onclick="window.showItemShop()" style="background: #8b5cf6; border-color: #a855f7;">UPGRADES</button>
+        </div>
+    </div>
+
+    <div id="item-shop-screen" class="screen" style="display:none;">
+        <h2 style="color:#a855f7">SUPPORT GEAR</h2>
+        <div id="item-shop-grid" class="grid" style="max-height: 60vh; overflow-y: auto;"></div>
+        <button onclick="window.toCharSelect()">BACK TO ROSTER</button>
+    </div>
+
+    <div id="pause-screen" class="screen" style="display:none; background: rgba(0,0,0,0.9);">
+        <h2 style="color:#fbbf24">PAUSED</h2>
+        <button onclick="window.togglePause()">RESUME</button>
+        <button onclick="window.quitGame()" style="background: #ef4444; border-color: #f87171;">ABORT MISSION</button>
+    </div>
+   
+    <div id="game-over-screen" class="screen" style="display:none;">
+        <h1 style="color:#ef4444; font-size: 40px; margin-bottom: 10px;">MISSION FAILED</h1>
+        <h2 id="final-score" style="color:#fbbf24; margin-bottom: 30px;">SCORE: 0</h2>
+        <div id="game-over-buttons" style="display: flex; gap: 15px;">
+            <button onclick="window.retryGame()">RETRY</button>
+            <button onclick="window.toCharSelect()">ROSTER</button>
+        </div>
+    </div>
+
+    <div id="tutorial-overlay" class="screen" style="display:none; z-index: 100; background: rgba(0,0,0,0.95);">
+        <h2 style="color:#60a5fa">HOW TO PLAY</h2>
+        <div style="text-align: left; font-size: 12px; line-height: 1.8; max-width: 600px; margin: 20px;">
+            <p>- Tap/Click to shoot in that direction.</p>
+            <p>- Recoil pushes you the OPPOSITE way. Use this to fly!</p>
+            <p>- Don't touch the floor. Flying costs HEAT.</p>
+            <p>- If you hit MAX HEAT, you overheat and fall until cooled.</p>
+            <p>- Destroy drones to build COMBO and ULTRA charge.</p>
+            <p>- Press the ULTRA button when full for a powerful move!</p>
+        </div>
+        <button onclick="window.closeTutorial()">I'M READY</button>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, setDoc, getDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 1. CONFIGURATION & CONSTANTS (Moved to top)
+        const firebaseConfig = JSON.parse(window.__firebase_config || '{}');
+        let app, auth, db;
+        let firebaseReady = false;
+        try {
+            if (firebaseConfig.apiKey) {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+                firebaseReady = true;
+            } else {
+                console.warn("No Firebase config found. Running in offline-only mode.");
+            }
+        } catch(e) {
+            console.error("Firebase init failed:", e);
+        }
+        const appId = window.__app_id || 'default-app-id';
+        let currentUser = null;
+
+        // Ensure AudioEngine object exists to avoid ReferenceErrors
+        window.AudioEngine = window.AudioEngine || { init: () => {}, playJump: () => {}, playExplosion: () => {}, playPowerup: () => {}, playUltra: () => {} };
+        const AudioEngine = window.AudioEngine;
+
+        const UPGRADES = {
+            cooling: { id: 'cooling', name: "COOLING SYSTEM", desc: "Heat drops faster", basePrice: 550, maxLevel: 5, currentLevel: 0 },
+            capacity: { id: 'capacity', name: "HEAT CAPACITY", desc: "Higher heat limit", basePrice: 550, maxLevel: 5, currentLevel: 0 },
+            ultra: { id: 'ultra', name: "ULTRA BATTERY", desc: "Plus Ultra charges faster", basePrice: 550, maxLevel: 3, currentLevel: 0 },
+            stabilizer: { id: 'stabilizer', name: "STABILIZER", desc: "Reduced recoil kick", basePrice: 550, maxLevel: 3, currentLevel: 0 },
+            bounty: { id: 'bounty', name: "BOUNTY CHIP", desc: "Earn more tokens per score", basePrice: 550, maxLevel: 3, currentLevel: 0 },
+            magnet: { id: 'magnet', name: "ITEM MAGNET", desc: "Pull powerups closer", basePrice: 600, maxLevel: 3, currentLevel: 0 },
+            luck: { id: 'luck', name: "LUCK MODULE", desc: "More powerups spawn", basePrice: 800, maxLevel: 3, currentLevel: 0 }
+        };
+
+        const HEROES = {
+            bakugo: { id: 'bakugo', name: "BAKUGO", type: "aoe", desc: "High Mobility\nULT: Howitzer (15s)", recoilForce: 20, gravity: 0.35, colors: { primary: '#f97316', secondary: '#000', blast: '#fbbf24', blastCore: '#ef4444' }, barColor: '#f97316', iconColor: '#f97316', words: ["BOOM!", "DIE!", "BLAST!"], specialName: "HOWITZER IMPACT", price: 100, locked: true },
+            deku: { id: 'deku', name: "DEKU", type: "sniper", desc: "Low Gravity\nULT: Full Cowl (15s)", recoilForce: 12, gravity: 0.25, colors: { primary: '#10b981', secondary: '#064e3b', blast: '#a7f3d0', blastCore: '#34d399' }, barColor: '#10b981', iconColor: '#10b981', words: ["SMASH!", "SHOOT!", "DETROIT!"], specialName: "FULL COWL 100%", price: 100, locked: true },
+            todoroki: { id: 'todoroki', name: "TODOROKI", type: "sniper", desc: "Balanced\nULT: Flashfreeze (15s)", recoilForce: 12, gravity: 0.25, colors: { primary: '#3b82f6', secondary: '#ef4444', blast: '#fca5a5', blastCore: '#b91c1c' }, barColor: '#3b82f6', iconColor: '#3b82f6', words: ["BURN!", "FREEZE!", "FLASH!"], specialName: "FLASHFREEZE", price: 100, locked: true },
+            uraraka: { id: 'uraraka', name: "URARAKA", type: "aoe", desc: "Floaty\nULT: Meteor Storm (15s)", recoilForce: 15, gravity: 0.15, colors: { primary: '#f472b6', secondary: '#be185d', blast: '#fbcfe8', blastCore: '#db2777' }, barColor: '#f472b6', iconColor: '#f472b6', words: ["RELEASE!", "FLOAT!", "ZERO!"], specialName: "METEOR STORM", price: 300, locked: true },
+            kirishima: { id: 'kirishima', name: "KIRISHIMA", type: "aoe", desc: "Heavy\nULT: Unbreakable (15s)", recoilForce: 10, gravity: 0.35, colors: { primary: '#ef4444', secondary: '#7f1d1d', blast: '#991b1b', blastCore: '#fff' }, barColor: '#ef4444', iconColor: '#ef4444', words: ["HARD!", "UNBREAK!", "GUTS!"], specialName: "UNBREAKABLE", price: 500, locked: true },
+            iida: { id: 'iida', name: "IIDA", type: "sniper", desc: "Fast\nULT: Recipro Turbo (15s)", recoilForce: 18, gravity: 0.3, colors: { primary: '#3b82f6', secondary: '#1e3a8a', blast: '#93c5fd', blastCore: '#fff' }, barColor: '#3b82f6', iconColor: '#3b82f6', words: ["ENGINE!", "TURBO!", "KICK!"], specialName: "RECIPRO TURBO", price: 300, locked: true },
+            kaminari: { id: 'kaminari', name: "KAMINARI", type: "aoe", desc: "Balanced\nULT: 1.3M Volts (15s)", recoilForce: 15, gravity: 0.28, colors: { primary: '#facc15', secondary: '#000', blast: '#fef08a', blastCore: '#fff' }, barColor: '#facc15', iconColor: '#facc15', words: ["SHOCK!", "WHEY!", "VOLT!"], specialName: "1.3M VOLTS", price: 500, locked: true },
+            tsuyu: { id: 'tsuyu', name: "FROPPY", type: "sniper", desc: "Agile\nULT: Camouflage (15s)", recoilForce: 18, gravity: 0.18, colors: { primary: '#22c55e', secondary: '#14532d', blast: '#86efac', blastCore: '#fff' }, barColor: '#22c55e', iconColor: '#22c55e', words: ["RIBBIT!", "HOP!", "TONGUE!"], specialName: "FROG HOP", price: 400, locked: true },
+            tokoyami: { id: 'tokoyami', name: "TSUKUYOMI", type: "aoe", desc: "Shadow\nULT: Abyss (15s)", recoilForce: 14, gravity: 0.24, colors: { primary: '#6b21a8', secondary: '#000', blast: '#a855f7', blastCore: '#000' }, barColor: '#6b21a8', iconColor: '#6b21a8', words: ["SHADOW!", "DARK!", "ABYSS!"], specialName: "BLACK ANKH", price: 600, locked: true },
+            mina: { id: 'mina', name: "PINKY", type: "aoe", desc: "Slippery\nULT: Acid Rain (15s)", recoilForce: 16, gravity: 0.2, colors: { primary: '#f472b6', secondary: '#831843', blast: '#fbcfe8', blastCore: '#ec4899' }, barColor: '#f472b6', iconColor: '#f472b6', words: ["ACID!", "DANCE!", "MELT!"], specialName: "ACID RAIN", price: 400, locked: true },
+            allmight: { id: 'allmight', name: "ALL MIGHT", type: "aoe", desc: "SYMBOL OF PEACE\nULT: SMASH (15s)", recoilForce: 24, gravity: 0.38, colors: { primary: '#eab308', secondary: '#1e3a8a', blast: '#fef08a', blastCore: '#ef4444' }, barColor: '#eab308', iconColor: '#eab308', words: ["TEXAS!", "DETROIT!", "CAROLINA!"], specialName: "UNITED STATES OF SMASH", price: 1500, locked: true },
+            jiro: { id: 'jiro', name: "EARPHONE JACK", type: "sniper", desc: "Soundwave\nULT: Amp (15s)", recoilForce: 16, gravity: 0.25, colors: { primary: '#7e22ce', secondary: '#000', blast: '#d8b4fe', blastCore: '#fff' }, barColor: '#7e22ce', iconColor: '#7e22ce', words: ["LOUD!", "ROCK!", "BEAT!"], specialName: "HEARTBEAT FUZZ", price: 400, locked: true },
+            sero: { id: 'sero', name: "CELLOPHANE", type: "sniper", desc: "Tape Swing\nULT: Barricade (15s)", recoilForce: 22, gravity: 0.22, colors: { primary: '#f97316', secondary: '#fff', blast: '#fff', blastCore: '#ccc' }, barColor: '#f97316', iconColor: '#f97316', words: ["TAPE!", "SWING!", "STICK!"], specialName: "TAPE SHOT", price: 350, locked: true },
+            endeavor: { id: 'endeavor', name: "ENDEAVOR", type: "aoe", desc: "#1 HERO\nULT: Prominence (15s)", recoilForce: 22, gravity: 0.35, colors: { primary: '#b91c1c', secondary: '#7f1d1d', blast: '#ef4444', blastCore: '#facc15' }, barColor: '#b91c1c', iconColor: '#b91c1c', words: ["BURN!", "FLASH!", "HELL!"], specialName: "PROMINENCE BURN", price: 1200, locked: true }
+        };
+       
+        // Expose to window for global access
+        window.HEROES = HEROES;
+        window.UPGRADES = UPGRADES;
+
+        // 2. GAME STATE & SAVE SYSTEM
+        window.userTokens = 0;
+        window.unlockedHeroes = [];
+        window.currentHeroKey = 'bakugo';
+       
+        window.SaveSystem = {
+            SAVE_KEY: 'ua_save_v3',
+
+            // Apply data to runtime variables
+            apply: (data) => {
+                if (!data) return;
+                console.log("Applying Data:", data);
+               
+                window.userTokens = data.tokens || 0;
+                window.unlockedHeroes = Array.isArray(data.unlocks) ? data.unlocks : [];
+                if (data.lastHero) window.currentHeroKey = data.lastHero;
+               
+                // Sync Upgrades
+                if (data.upgrades) {
+                    for (let key in window.UPGRADES) {
+                        if (data.upgrades[key] !== undefined) {
+                            window.UPGRADES[key].currentLevel = data.upgrades[key];
+                        }
+                    }
+                }
+
+                // Sync Hero Locks
+                window.unlockedHeroes.forEach(id => {
+                    if (HEROES[id]) HEROES[id].locked = false;
+                });
+               
+                // Update UI if active
+                if(typeof window.updateTokenUI === 'function') window.updateTokenUI();
+            },
+
+            // Collect data
+            gather: () => {
+                const upgradeLevels = {};
+                for(let k in window.UPGRADES) upgradeLevels[k] = window.UPGRADES[k].currentLevel;
+                return {
+                    tokens: window.userTokens,
+                    unlocks: window.unlockedHeroes,
+                    upgrades: upgradeLevels,
+                    lastHero: window.currentHeroKey
+                };
+            },
+
+            save: async () => {
+                const data = window.SaveSystem.gather();
+                // Local
+                try { localStorage.setItem(window.SaveSystem.SAVE_KEY, JSON.stringify(data)); }
+                catch(e) { console.error("Local Save Fail", e); }
+               
+                // Cloud
+                if (currentUser && firebaseReady) {
+                    try {
+                        const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'saveData', 'main');
+                        await setDoc(userDocRef, { ...data, lastSaved: serverTimestamp() }, { merge: true });
+                    } catch (e) { console.error("Cloud Save Fail", e); }
+                }
+            },
+
+            loadFromLocal: () => {
+                try {
+                    const raw = localStorage.getItem(window.SaveSystem.SAVE_KEY);
+                    if (raw) {
+                        const data = JSON.parse(raw);
+                        if (data.unlocks && data.unlocks.length > 0) {
+                            window.SaveSystem.apply(data);
+                            return true; // Data found!
+                        }
+                    }
+                } catch (e) { console.error("Local Load Fail", e); }
+                return false; // No data found
+            },
+
+            loadFromCloud: async () => {
+                if (!currentUser || !firebaseReady) return;
+                try {
+                    const userDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'saveData', 'main');
+                    const docSnap = await getDoc(userDocRef);
+                    if (docSnap.exists()) {
+                        const cloudData = docSnap.data();
+                        const localData = window.SaveSystem.gather();
+                       
+                        // Cloud Priority Logic: If Cloud has unlocks and local has none, OR cloud has more tokens
+                        const cloudBetter = (cloudData.unlocks?.length > 0 && localData.unlocks.length === 0) || (cloudData.tokens > localData.tokens);
+                       
+                        if (cloudBetter) {
+                            console.log("Syncing from Cloud...");
+                            window.SaveSystem.apply(cloudData);
+                            window.SaveSystem.save(); // Save to local
+                           
+                            // Visual Transition
+                            if (window.gameState === 'LOADING' || window.gameState === 'STARTER') {
+                                if (window.unlockedHeroes.length > 0) {
+                                    if(window.initTimeout) clearTimeout(window.initTimeout);
+                                    window.toCharSelect();
+                                }
+                            }
+                        }
+                    }
+                } catch (e) { console.error("Cloud Load Fail", e); }
+            }
+        };
+
+        // 3. AUTH LOGIC (After SaveSystem is defined)
+        const initAuth = async (retries = 3) => {
+            if (!firebaseReady) { console.warn("Skipping auth — no Firebase."); return; }
+            for (let i = 0; i < retries; i++) {
+                try {
+                    if (typeof window.__initial_auth_token !== 'undefined' && window.__initial_auth_token) {
+                        await signInWithCustomToken(auth, window.__initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                    return; // Success
+                } catch (error) {
+                    console.error(`Auth Error (Attempt ${i+1}/${retries}):`, error);
+                    if (i < retries - 1) await new Promise(r => setTimeout(r, 1000 * Math.pow(2, i)));
+                }
+            }
+            console.warn("Continuing offline mode after auth failure.");
+        };
+        initAuth();
+
+        if (firebaseReady) onAuthStateChanged(auth, (user) => {
+            if (user) {
+                currentUser = user;
+                const statusEl = document.getElementById('sync-status');
+                if(statusEl) {
+                    statusEl.innerText = "ONLINE";
+                    statusEl.style.color = "#4ade80";
+                }
+                window.SaveSystem.loadFromCloud();
+                if (window.Leaderboard && window.Leaderboard.getWeeklyHighScore) {
+                    window.Leaderboard.getWeeklyHighScore().then(s => { window.weeklyRecordTarget = s > 0 ? s : 500; });
+                }
+            }
+        });
+
+        // --- GAME LOGIC ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas ? canvas.getContext('2d') : null;
+        const scoreEl = document.getElementById('score-display');
+        const tokenHudEl = document.getElementById('token-hud');
+        const menuTokenEl = document.getElementById('menu-token-display');
+        const heatBarEl = document.getElementById('heat-bar');
+        const heatContainerEl = document.getElementById('heat-container');
+        const hudHeroName = document.getElementById('hud-hero-name');
+        const ultraBtn = document.getElementById('ultra-btn');
+        const ultraGaugeFill = document.getElementById('ultra-gauge-fill');
+        const screens = { loading: document.getElementById('loading-screen'), select: document.getElementById('char-select-screen'), starter: document.getElementById('starter-select-screen'), gameover: document.getElementById('game-over-screen'), leaderboard: document.getElementById('leaderboard-screen'), itemshop: document.getElementById('item-shop-screen'), pause: document.getElementById('pause-screen') };
+        const startMsgEl = document.getElementById('start-message');
+        const overheatEl = document.getElementById('overheat-warning');
+        const comboDisplayEl = document.getElementById('combo-display');
+        const comboCountEl = document.getElementById('combo-count');
+        const starterBtn = document.getElementById('starter-action-btn');
+        const shopBtn = document.getElementById('shop-action-btn');
+        const starterDesc = document.getElementById('starter-desc');
+        const shopDesc = document.getElementById('shop-desc');
+        const nameInputContainer = document.getElementById('name-entry-container');
+        const gameOverButtons = document.getElementById('game-over-buttons');
+        const nameInput = document.getElementById('name-input');
+        const lbList = document.getElementById('leaderboard-list');
+
+        let width, height, animationId = null, lastTime = 0, gameState = 'LOADING', selectedMenuId = null;
+        let score = 0, displayScore = 0, highScore = localStorage.getItem('ua_arcade_hiscore') || 0;
+        let frames = 0, screenShake = 0, whiteFlash = 0, combo = 0, comboTimer = 0;
+        let weeklyHighScore = 0, sessionMaxCombo = 0, recordBroken = false;
+        let isPaused = false;
+       
+        let FRICTION = 0.95;
+        let MAX_HEAT = 100;
+        let HEAT_PER_SHOT = 14;
+        let HEAT_DECAY = 0.6;
+        let HEAT_COOLDOWN_RATE = 1.2;
+        let DRONE_SPAWN_RATE = 40;
+        let MAX_COMBO_TIME = 150;
+        let ULTRA_MAX = 100;
+        let ULTRA_PER_KILL = 10;
+        let ULTRA_DURATION = 900;
+        let RECOIL_MOD = 1.0;
+        let TOKEN_MULTIPLIER = 1.0;
+        const BORDER_SIZE = 20;
+        const player = { x: 0, y: 0, vx: 0, vy: 0, radius: 20, heat: 0, overheated: false, rotation: 0, ultra: 0, ultraActive: false, ultraTimer: 0, gravityMod: 1.0 };
+        let drones = [], explosions = [], particles = [], comicTexts = [], powerups = [];
+        let currentLbTab = 'score';
+
+        window.addEventListener('beforeunload', () => window.SaveSystem.save());
+        document.addEventListener('visibilitychange', () => { if(document.visibilityState==='hidden') window.SaveSystem.save(); });
+       
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') window.togglePause();
+        });
+
+        window.togglePause = () => {
+            if (gameState !== 'PLAYING') return;
+            isPaused = !isPaused;
+            if (screens.pause) screens.pause.style.display = isPaused ? 'flex' : 'none';
+        }
+
+        window.quitGame = () => {
+            isPaused = false;
+            if (screens.pause) screens.pause.style.display = 'none';
+            window.toCharSelect();
+        }
+
+        window.createCard = (hero, clickHandler, containerId) => {
+            const card = document.createElement('div');
+            card.id = `${containerId}-card-${hero.id}`;
+            card.className = `char-card ${hero.locked ? 'locked' : ''}`;
+            card.onclick = () => { if (typeof AudioEngine !== 'undefined') AudioEngine.init(); clickHandler(); };
+            const icon = document.createElement('div'); icon.className = 'char-icon'; icon.style.backgroundColor = hero.iconColor;
+            const name = document.createElement('div'); name.className = 'char-name'; name.innerText = hero.name;
+            const type = document.createElement('div'); type.className = 'char-type'; type.innerText = hero.desc;
+            card.appendChild(icon); card.appendChild(name); card.appendChild(type);
+            if (hero.locked) { const overlay = document.createElement('div'); overlay.className = 'lock-overlay'; overlay.innerHTML = `LOCKED`; card.appendChild(overlay); }
+            return card;
+        }
+
+        window.highlightStarter = (id) => {
+            document.querySelectorAll('#starter-grid .char-card').forEach(c => c.classList.remove('selected'));
+            const card = document.getElementById(`starter-card-${id}`);
+            if (card) card.classList.add('selected');
+            selectedMenuId = id;
+            if (starterBtn) {
+                starterBtn.disabled = false;
+                starterBtn.innerText = `CHOOSE ${HEROES[id].name}`;
+            }
+            if (starterDesc) starterDesc.innerText = HEROES[id].desc.replace('\n', ' - ');
+        }
+
+        window.renderStarterScreen = () => {
+            const grid = document.getElementById('starter-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            ['bakugo', 'deku', 'todoroki'].forEach(id => { grid.appendChild(window.createCard({...HEROES[id], locked: false}, () => window.highlightStarter(id), 'starter')); });
+        }
+
+        window.highlightShop = (id) => {
+            document.querySelectorAll('#char-grid .char-card').forEach(c => c.classList.remove('selected'));
+            const card = document.getElementById(`shop-card-${id}`);
+            if (card) card.classList.add('selected');
+            selectedMenuId = id; const hero = HEROES[id];
+            if(hero.locked) {
+                if (shopDesc) shopDesc.innerText = `COST: ${hero.price} TOKENS`;
+                if (shopBtn) { shopBtn.innerText = `UNLOCK (${hero.price})`; shopBtn.disabled = window.userTokens < hero.price; }
+            }
+            else {
+                if (shopDesc) shopDesc.innerText = "READY TO DEPLOY";
+                if (shopBtn) { shopBtn.innerText = "START MISSION"; shopBtn.disabled = false; }
+            }
+        }
+
+        window.renderShopScreen = () => {
+            const grid = document.getElementById('char-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            Object.values(HEROES).forEach(hero => { grid.appendChild(window.createCard(hero, () => window.highlightShop(hero.id), 'shop')); });
+        }
+
+        window.updateTokenUI = () => {
+            if (tokenHudEl) tokenHudEl.innerText = `TOKENS: ${Math.floor(window.userTokens)}`;
+            if (menuTokenEl) menuTokenEl.innerText = `TOKENS: ${Math.floor(window.userTokens)}`;
+        }
+
+        // --- NEW: FUNCTION TO FORCE TRANSITION TO SELECT SCREEN ---
+        window.toCharSelect = () => {
+            gameState = 'SELECT';
+            window.renderShopScreen();
+            window.updateTokenUI();
+            showScreen('select');
+            // Restore last hero highlight
+            if(window.currentHeroKey && HEROES[window.currentHeroKey]) {
+                window.highlightShop(window.currentHeroKey);
+            }
+        }
+
+        window.confirmStarter = () => {
+            if(!selectedMenuId) return;
+           
+            // 1. Update Game Data
+            if (!window.unlockedHeroes.includes(selectedMenuId)) {
+                window.unlockedHeroes.push(selectedMenuId);
+            }
+            HEROES[selectedMenuId].locked = false;
+            window.currentHeroKey = selectedMenuId;
+           
+            // 2. Force Immediate Save
+            window.SaveSystem.save();
+           
+            // 3. Start Game
+            showScreen(null);
+            startReadySequence();
+        }
+
+        window.confirmShopSelection = () => {
+            if(!selectedMenuId) return;
+            const hero = HEROES[selectedMenuId];
+            if(hero.locked) {
+                if(window.userTokens >= hero.price) {
+                    window.userTokens -= hero.price;
+                   
+                    window.unlockedHeroes.push(hero.id);
+                    hero.locked = false;
+                   
+                    window.SaveSystem.save();
+                    window.updateTokenUI();
+                    window.renderShopScreen();
+                    window.highlightShop(hero.id);
+                    AudioEngine.playPowerup();
+                }
+            } else {
+                window.currentHeroKey = hero.id;
+                window.SaveSystem.save();
+                showScreen(null);
+                startReadySequence();
+            }
+        }
+
+        window.renderItemShop = () => {
+            const grid = document.getElementById('item-shop-grid');
+            if (!grid) return;
+            grid.innerHTML = '';
+            Object.values(window.UPGRADES).forEach(up => {
+                const div = document.createElement('div');
+                const isMax = up.currentLevel >= up.maxLevel;
+                const cost = 550 * (up.currentLevel + 1);
+                div.className = `upgrade-card ${isMax ? 'maxed' : ''}`;
+                div.onclick = () => window.buyUpgrade(up.id);
+                let pips = '';
+                for(let i=0; i<up.maxLevel; i++) pips += `<div class="level-pip ${i < up.currentLevel ? 'active' : ''}"></div>`;
+                div.innerHTML = `<div class="upgrade-name">${up.name}</div><div class="upgrade-level">${pips}</div><div class="upgrade-desc">${up.desc}</div><div class="upgrade-price">${isMax ? "MAXED" : cost + " TOKENS"}</div>`;
+                grid.appendChild(div);
+            });
+            window.updateTokenUI();
+        }
+
+        window.buyUpgrade = (id) => {
+            AudioEngine.init();
+            const up = window.UPGRADES[id];
+            if(up.currentLevel >= up.maxLevel) return;
+            const cost = 550 * (up.currentLevel + 1);
+            if(window.userTokens >= cost) {
+                window.userTokens -= cost;
+                up.currentLevel++;
+                window.SaveSystem.save();
+                window.renderItemShop();
+                AudioEngine.playPowerup();
+            } else { alert("Not enough tokens!"); }
+        }
+
+        window.showItemShop = () => { window.renderItemShop(); showScreen('itemshop'); }
+       
+        window.showTutorial = (force = false) => {
+            const overlay = document.getElementById('tutorial-overlay');
+            if (force || !localStorage.getItem('ua_tutorial_seen')) {
+                if (overlay) overlay.style.display = 'flex';
+                return true;
+            }
+            return false;
+        }
+       
+        window.closeTutorial = () => {
+            const overlay = document.getElementById('tutorial-overlay');
+            if (overlay) overlay.style.display = 'none';
+            localStorage.setItem('ua_tutorial_seen', 'true');
+            if (gameState === 'TUTORIAL_PENDING') { startActualGame(); }
+        }
+
+        function applyUpgrades() {
+            MAX_HEAT = 100 + (window.UPGRADES.capacity.currentLevel * 20);
+            HEAT_COOLDOWN_RATE = 0.9 + (window.UPGRADES.cooling.currentLevel * 0.2);
+            RECOIL_MOD = 1.0 - (window.UPGRADES.stabilizer.currentLevel * 0.15);
+            TOKEN_MULTIPLIER = 1.0 + (window.UPGRADES.bounty.currentLevel * 0.2);
+        }
+
+        function resize() {
+            width = window.innerWidth;
+            height = window.innerHeight;
+            if (canvas) {
+                canvas.width = width;
+                canvas.height = height;
+            }
+        }
+
+        function showScreen(name) {
+            Object.values(screens).forEach(s => {
+                if (s) s.style.display = 'none';
+            });
+            if(screens[name]) screens[name].style.display = 'flex';
+        }
+
+        window.retryGame = () => { score = 0; displayScore = 0; showScreen(null); startReadySequence(); }
+        function updateScoreDisplay() { scoreEl.innerHTML = `SCORE<br>${Math.floor(displayScore).toString().padStart(6, '0')}`; }
+
+        function startReadySequence() {
+            if (window.showTutorial()) {
+                gameState = 'TUTORIAL_PENDING';
+            } else {
+                startActualGame();
+            }
+        }
+       
+        function startActualGame() {
+            applyUpgrades();
+            resetEntities(); gameState = 'READY';
+            const hero = HEROES[window.currentHeroKey];
+            hudHeroName.innerText = hero.name; hudHeroName.style.color = hero.colors.primary;
+            heatContainerEl.style.borderColor = hero.colors.primary; heatBarEl.style.background = hero.barColor;
+            updateUltraUI();
+           
+            if(window.Leaderboard && window.Leaderboard.getWeeklyHighScore) {
+                 window.Leaderboard.getWeeklyHighScore().then(s => { window.weeklyRecordTarget = s > 0 ? s : 500; });
+            }
+
+            startMsgEl.style.display = 'block'; startMsgEl.innerText = "READY";
+            setTimeout(() => { startMsgEl.innerText = "GO!"; setTimeout(() => { startMsgEl.style.display = 'none'; gameState = 'PLAYING'; lastTime = performance.now(); }, 600); }, 1000);
+        }
+
+        function resetEntities() {
+            player.x = width / 2; player.y = height / 3; player.vx = player.vy = player.heat = player.ultra = player.ultraTimer = player.buffTimer = 0;
+            player.overheated = false; player.gravityMod = 1.0;
+            drones = []; explosions = []; particles = []; comicTexts = []; powerups = [];
+            score = displayScore = combo = comboTimer = 0;
+            sessionMaxCombo = 0; recordBroken = false;
+            overheatEl.style.display = 'none'; comboDisplayEl.style.display = 'none';
+        }
+
+        function handleInput(e) {
+            if (gameState !== 'PLAYING') return;
+            if (isPaused) return;
+            if (player.overheated && !player.ultraActive) return;
+            const rect = canvas.getBoundingClientRect();
+            performAction(e.clientX - rect.left, e.clientY - rect.top);
+        }
+
+        function performAction(x, y) {
+            AudioEngine.playJump();
+            const hero = HEROES[window.currentHeroKey];
+            const dx = player.x - x, dy = player.y - y, dist = Math.sqrt(dx*dx + dy*dy);
+            const angle = Math.atan2(dy, dx), distMult = Math.min(1, 160 / (dist + 1));
+            player.vx += Math.cos(angle) * hero.recoilForce * distMult;
+            player.vy += Math.sin(angle) * hero.recoilForce * distMult;
+
+            if(!player.ultraActive && player.buffTimer <= 0) {
+                player.heat = Math.min(player.heat + HEAT_PER_SHOT, MAX_HEAT);
+                if (player.heat >= MAX_HEAT) { player.overheated = true; overheatEl.style.display = 'block'; }
+            }
+
+            screenShake = hero.id === 'allmight' ? 15 * distMult * RECOIL_MOD : 8 * distMult * RECOIL_MOD;
+            let beamWidth = player.ultraActive ? 45 : 15, explRadius = player.ultraActive ? 160 : 80;
+
+            if (hero.type === 'aoe') {
+                explosions.push({ type: 'aoe', x: x, y: y, radius: 10, maxRadius: explRadius, alpha: 1, color: hero.colors.blast, coreColor: hero.colors.blastCore });
+                drones.forEach((d, i) => { if (Math.hypot(d.x - x, d.y - y) < explRadius + d.radius) destroyDrone(i); });
+            } else {
+                const shotAngle = Math.atan2(y - player.y, x - player.x), endX = player.x + Math.cos(shotAngle) * 2000, endY = player.y + Math.sin(shotAngle) * 2000;
+                explosions.push({ type: 'beam', x1: player.x, y1: player.y, x2: endX, y2: endY, alpha: 1, width: beamWidth, color: hero.colors.blast });
+                if(player.ultraActive && window.currentHeroKey === 'todoroki') {
+                     explosions.push({ type: 'aoe', x: player.x, y: player.y, radius: 10, maxRadius: 150, alpha: 1, color: '#ef4444', coreColor: '#fff' });
+                    drones.forEach((d, i) => { if (Math.hypot(d.x - player.x, d.y - player.y) < 150 + d.radius) destroyDrone(i); });
+                }
+                drones.forEach((d, i) => { if (distToSegment({x: d.x, y: d.y}, {x: player.x, y: player.y}, {x: endX, y: endY}) < d.radius + beamWidth) destroyDrone(i); });
+            }
+           
+            if(player.ultraActive) {
+                if (window.currentHeroKey === 'uraraka') explosions.push({ type: 'meteor', x: Math.random() * width, y: -50, vy: 15 + Math.random() * 5, c1: '#db2777', c2: '#fbcfe8' });
+                if (window.currentHeroKey === 'mina') explosions.push({ type: 'meteor', x: Math.random() * width, y: -50, vy: 15 + Math.random() * 5, c1: '#831843', c2: '#f472b6' });
+                if (window.currentHeroKey === 'kaminari') explosions.push({ type: 'aoe', x: Math.random() * width, y: Math.random() * height, radius: 20, maxRadius: 100, alpha: 1, color: '#fef08a', coreColor: '#fff'});
+            }
+        }
+
+        function updateUltraUI() {
+            if(player.ultraActive) { ultraGaugeFill.style.width = `${(player.ultraTimer / ULTRA_DURATION) * 100}%`; ultraBtn.classList.add('active'); ultraBtn.classList.remove('ready'); }
+            else { ultraGaugeFill.style.width = `${player.ultra}%`; ultraBtn.classList.remove('active'); if (player.ultra >= ULTRA_MAX) ultraBtn.classList.add('ready'); else ultraBtn.classList.remove('ready'); }
+        }
+
+        window.triggerSpecial = (e) => {
+            e.stopPropagation();
+            if (gameState !== 'PLAYING' || player.ultra < ULTRA_MAX) return;
+            AudioEngine.playUltra();
+            player.ultra = 0; player.ultraActive = true; player.ultraTimer = ULTRA_DURATION;
+            player.heat = 0; player.overheated = false; overheatEl.style.display = 'none';
+            spawnComicText(player.x, player.y - 50, HEROES[window.currentHeroKey].specialName, "#fbbf24", 25);
+            screenShake = 20; whiteFlash = 5; updateUltraUI();
+        }
+
+        function destroyDrone(index, isSpecial = false) {
+            if (!drones[index]) return;
+            AudioEngine.playExplosion();
+            const d = drones[index], hero = HEROES[window.currentHeroKey];
+            for(let i=0; i<8; i++) particles.push({ x: d.x, y: d.y, vx: (Math.random() - 0.5) * 15, vy: (Math.random() - 0.5) * 15, life: 1.0, color: i % 2 === 0 ? '#10b981' : '#fff' });
+            combo++;
+            if (combo > sessionMaxCombo) sessionMaxCombo = combo;
+            comboTimer = MAX_COMBO_TIME;
+            let points = 100 * combo; score += points;
+            spawnComicText(d.x, d.y, `${points}`, "#fff", 20);
+            drones.splice(index, 1);
+            if(!player.ultraActive) {
+                player.heat = Math.max(0, player.heat - 25);
+                if(player.heat < MAX_HEAT * 0.8) { player.overheated = false; overheatEl.style.display = 'none'; }
+                let gain = ULTRA_PER_KILL + (window.UPGRADES.ultra.currentLevel * 2);
+                player.ultra = Math.min(player.ultra + gain, ULTRA_MAX);
+                updateUltraUI();
+            }
+            screenShake += 5; whiteFlash = 2;
+
+            if (!recordBroken && window.weeklyRecordTarget > 0 && score > window.weeklyRecordTarget) {
+                recordBroken = true;
+                AudioEngine.playUltra();
+                const msg = document.getElementById('new-record-msg');
+                msg.classList.add('show');
+                setTimeout(() => msg.classList.remove('show'), 3000);
+            }
+        }
+
+        function spawnPowerup() {
+            const types = [{ type: 'COOLANT', color: '#60a5fa', letter: 'C' }, { type: 'GRAVITY', color: '#f472b6', letter: 'G' }, { type: 'ULTRA', color: '#facc15', letter: 'U' }];
+            const p = types[Math.floor(Math.random() * types.length)], side = Math.random() > 0.5 ? -30 : width + 30;
+            powerups.push({ x: side, y: Math.random() * (height * 0.6) + 50, vx: (width/2 - side) * 0.005, vy: (Math.random() - 0.5), type: p.type, color: p.color, letter: p.letter, radius: 15 });
+        }
+
+        function spawnDrone() {
+            const side = Math.random() > 0.5 ? -50 : width + 50;
+            const y = Math.random() * (height * 0.8);
+            const speed = 2 + Math.random() * 3 + (score / 2000);
+            const vx = side < 0 ? speed : -speed;
+            drones.push({ x: side, y: y, vx: vx, vy: (Math.random() - 0.5) * 2, radius: 15, angle: 0 });
+        }
+
+        function spawnComicText(x, y, text, color, size = 20) {
+            comicTexts.push({ x, y, text, color, size, life: 2.0, vy: -1.5 });
+        }
+
+        function distToSegmentSquared(p, v, w) {
+            let l2 = (v.x - w.x)*(v.x - w.x) + (v.y - w.y)*(v.y - w.y);
+            if (l2 === 0) return (p.x - v.x)*(p.x - v.x) + (p.y - v.y)*(p.y - v.y);
+            let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+            t = Math.max(0, Math.min(1, t));
+            return (p.x - (v.x + t * (w.x - v.x)))*(p.x - (v.x + t * (w.x - v.x))) + (p.y - (v.y + t * (w.y - v.y)))*(p.y - (v.y + t * (w.y - v.y)));
+        }
+
+        function distToSegment(p, v, w) {
+            return Math.sqrt(distToSegmentSquared(p, v, w));
+        }
+
+        function endGame() {
+            gameState = 'GAMEOVER';
+            const finalScoreEl = document.getElementById('final-score');
+            if(finalScoreEl) finalScoreEl.innerText = `SCORE: ${Math.floor(score)}`;
+            showScreen('gameover');
+            let newTokens = Math.floor(score / 100) * TOKEN_MULTIPLIER;
+            window.userTokens += newTokens;
+            window.updateTokenUI();
+            window.SaveSystem.save();
+        }
+
+        function activatePowerup(p) {
+            AudioEngine.playPowerup();
+            spawnComicText(player.x, player.y - 30, p.type + "!", p.color, 20);
+            if(p.type === 'COOLANT') { player.heat = 0; player.overheated = false; overheatEl.style.display = 'none'; }
+            else if (p.type === 'GRAVITY') { player.gravityMod = 0.3; setTimeout(() => { player.gravityMod = 1.0; }, 5000); }
+            else if (p.type === 'ULTRA') { player.ultra = Math.min(player.ultra + 20, ULTRA_MAX); updateUltraUI(); }
+        }
+
+        function update(dt) {
+            if (displayScore < score) { displayScore += (score - displayScore) * 0.1; updateScoreDisplay(); }
+            if (gameState !== 'PLAYING') return;
+            if (isPaused) return;
+
+            frames++;
+           
+            if (window.UPGRADES.magnet.currentLevel > 0) {
+                const range = 100 + (window.UPGRADES.magnet.currentLevel * 50);
+                powerups.forEach(p => {
+                    const d = Math.hypot(player.x - p.x, player.y - p.y);
+                    if (d < range) {
+                        p.x += (player.x - p.x) * 0.05;
+                        p.y += (player.y - p.y) * 0.05;
+                    }
+                });
+            }
+
+            const hero = HEROES[window.currentHeroKey];
+            player.vy += hero.gravity * player.gravityMod; player.vx *= FRICTION; player.vy *= FRICTION;
+            player.x += player.vx; player.y += player.vy; player.rotation = player.vx * 0.05;
+            if(player.ultraActive) { player.ultraTimer--; player.heat = 0; updateUltraUI(); if(player.ultraTimer <= 0) player.ultraActive = false; }
+            if(player.buffTimer > 0) { player.buffTimer--; player.heat = 0; if (frames % 10 === 0) spawnComicText(player.x, player.y, "HARD!", "#fff", 10); }
+           
+            if (player.x - player.radius < BORDER_SIZE) { player.x = BORDER_SIZE + player.radius; player.vx *= -0.8; }
+            if (player.x + player.radius > width - BORDER_SIZE) { player.x = width - BORDER_SIZE - player.radius; player.vx *= -0.8; }
+            if (player.y - player.radius < BORDER_SIZE) { player.y = BORDER_SIZE + player.radius; player.vy *= -0.5; }
+           
+            if (player.y + player.radius > height - 30) {
+                if ((player.ultraActive && window.currentHeroKey === 'kirishima') || player.gravityMod < 1.0) { player.vy = -15; screenShake = 10; }
+                else endGame();
+            }
+
+            if (player.overheated) {
+                player.heat -= HEAT_COOLDOWN_RATE;
+                if (player.heat <= 0) { player.overheated = false; overheatEl.style.display = 'none'; }
+            } else {
+                player.heat = Math.max(0, player.heat - HEAT_DECAY);
+            }
+            heatBarEl.style.width = `${player.heat}%`; heatBarEl.style.background = player.overheated ? '#ef4444' : hero.barColor;
+
+            if (combo > 0) {
+                comboTimer--;
+                if (comboTimer <= 0) {
+                    combo = 0;
+                    spawnComicText(player.x, player.y - 50, "LOST", "#9ca3af", 15);
+                }
+                comboDisplayEl.style.display = 'block';
+                comboCountEl.innerText = `x${combo}`;
+                let scale = 1 + (combo % 2) * 0.1;
+                comboCountEl.style.transform = `scale(${scale})`;
+            } else {
+                comboDisplayEl.style.display = 'none';
+            }
+           
+            let luckMod = window.UPGRADES.luck.currentLevel * 50;
+            if (frames % (600 - luckMod) === 0) spawnPowerup();
+
+            if (frames % Math.max(25, DRONE_SPAWN_RATE - Math.floor(score/1000)*5) === 0) spawnDrone();
+           
+            powerups.forEach((p, i) => { p.x += p.vx; p.y += p.vy; if (Math.hypot(player.x - p.x, player.y - p.y) < player.radius + p.radius) { activatePowerup(p); powerups.splice(i, 1); } });
+            drones.forEach((d, index) => {
+                d.x += d.vx; d.y += d.vy; d.angle += 0.1;
+                const dist = Math.hypot(player.x - d.x, player.y - d.y);
+                if (dist < player.radius + d.radius) {
+                    if (player.ultraActive && window.currentHeroKey === 'kirishima') destroyDrone(index);
+                    else {
+                        const angle = Math.atan2(player.y - d.y, player.x - d.x);
+                        player.vx += Math.cos(angle) * 15;
+                        player.vy += Math.sin(angle) * 15;
+                        screenShake = 10;
+                        score = Math.max(0, score - 100);
+                        spawnComicText(player.x, player.y, "OUCH!", "#ef4444", 20);
+                        spawnComicText(player.x, player.y - 30, "-100", "#ef4444", 15);
+                    }
+                }
+            });
+            drones = drones.filter(d => d.x > -200 && d.x < width + 200 && d.y > -200 && d.y < height + 200);
+
+            explosions.forEach((e, i) => { if (e.type === 'aoe') { e.radius += 5; e.alpha -= 0.08; } else if (e.type === 'beam') { e.alpha -= 0.08; e.width *= 0.9; } else if (e.type === 'meteor') { e.y += e.vy; e.alpha -= 0.02; drones.forEach((d, idx) => { if (Math.hypot(d.x - e.x, d.y - e.y) < 30) destroyDrone(idx); }); } if (e.alpha <= 0 || e.y > height) explosions.splice(i, 1); });
+            particles.forEach((p, i) => { p.x += p.vx; p.y += p.vy; p.vy += 0.2; if ((p.life -= 0.03) <= 0) particles.splice(i, 1); });
+            comicTexts.forEach((t, i) => { t.y += t.vy; if ((t.life -= 0.02) <= 0) comicTexts.splice(i, 1); });
+            screenShake *= 0.9; whiteFlash = Math.max(0, whiteFlash - 1);
+        }
+
+        function drawEnvironment() {
+            if (!ctx) return;
+            ctx.fillStyle = '#333';
+            ctx.fillRect(0, 0, width, BORDER_SIZE);
+            ctx.fillRect(0, 0, BORDER_SIZE, height);
+            ctx.fillRect(width - BORDER_SIZE, 0, BORDER_SIZE, height);
+            ctx.fillStyle = '#fbbf24';
+            ctx.save(); ctx.beginPath(); ctx.rect(0,0,BORDER_SIZE, height); ctx.rect(width-BORDER_SIZE,0,BORDER_SIZE, height); ctx.rect(0,0,width, BORDER_SIZE); ctx.clip();
+            for (let i = -height; i < width; i += 40) ctx.fillRect(i, 0, 10, height);
+            ctx.restore();
+            drawFloor();
+        }
+
+        function drawFloor() {
+            const floorY = height - 30;
+            if (!ctx) return;
+            ctx.fillStyle = '#fbbf24'; ctx.fillRect(0, floorY, width, 30);
+            ctx.fillStyle = '#000'; for(let i=0; i<width; i+=80) ctx.fillRect(i, floorY, 40, 30);
+            ctx.save(); ctx.shadowBlur = 15; ctx.shadowColor = '#3b82f6'; ctx.strokeStyle = '#60a5fa'; ctx.lineWidth = 3; ctx.lineJoin = 'round';
+            ctx.beginPath(); ctx.moveTo(0, floorY);
+            for(let i=0; i <= width; i+=20) { let h = Math.random() * 20; ctx.lineTo(i + 10, floorY - h); ctx.lineTo(i + 20, floorY); }
+            ctx.stroke();
+            ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(0, floorY);
+            for(let i=0; i <= width; i+=40) { let h = Math.random() * 15; ctx.lineTo(i + 20, floorY - h); ctx.lineTo(i + 40, floorY); }
+            ctx.stroke(); ctx.restore();
+        }
+
+        function hexToRgba(hex, alpha) {
+            let r = 0, g = 0, b = 0;
+            if (hex.length === 4) {
+                r = parseInt(hex[1] + hex[1], 16);
+                g = parseInt(hex[2] + hex[2], 16);
+                b = parseInt(hex[3] + hex[3], 16);
+            } else if (hex.length === 7) {
+                r = parseInt(hex.slice(1, 3), 16);
+                g = parseInt(hex.slice(3, 5), 16);
+                b = parseInt(hex.slice(5, 7), 16);
+            }
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        }
+
+        function draw() {
+            if (!ctx) return;
+            ctx.fillStyle = '#111'; ctx.fillRect(0, 0, width, height);
+            ctx.save(); if(screenShake > 0.5) ctx.translate((Math.random()-0.5)*screenShake, (Math.random()-0.5)*screenShake);
+           
+            drawEnvironment();
+
+            explosions.forEach(e => {
+                if (e.type === 'aoe') { const pixelSize = 6, r = Math.floor(e.radius / pixelSize) * pixelSize; ctx.fillStyle = hexToRgba(e.color, e.alpha); for(let py = -r; py <= r; py += pixelSize) for(let px = -r; px <= r; px += pixelSize) if(px*px + py*py <= r*r && Math.random() > 0.15) ctx.fillRect(e.x + px, e.y + py, pixelSize, pixelSize); ctx.fillStyle = hexToRgba(e.coreColor, e.alpha); const coreR = r * 0.6; for(let py = -coreR; py <= coreR; py += pixelSize) for(let px = -coreR; px <= coreR; px += pixelSize) if(px*px + py*py <= coreR*coreR) ctx.fillRect(e.x + px, e.y + py, pixelSize, pixelSize); }
+                else if (e.type === 'beam') { const steps = Math.ceil(Math.hypot(e.x2 - e.x1, e.y2 - e.y1) / 8), dx = (e.x2 - e.x1) / steps, dy = (e.y2 - e.y1) / steps; for(let i=0; i<steps; i++) { const size = e.width * (Math.random() * 0.4 + 0.6); ctx.fillStyle = hexToRgba(e.color, e.alpha); const bx = e.x1 + dx*i, by = e.y1 + dy*i; ctx.fillRect(bx - size/2, by - size/2, size, size); ctx.fillStyle = `rgba(255,255,255,${e.alpha})`; ctx.fillRect(bx - size/4, by - size/4, size/2, size/2); } }
+                else if (e.type === 'meteor') { ctx.fillStyle = hexToRgba(e.c1 || '#db2777', e.alpha); ctx.fillRect(e.x - 10, e.y - 10, 20, 20); ctx.fillStyle = hexToRgba(e.c2 || '#fbcfe8', e.alpha); ctx.fillRect(e.x - 5, e.y - 5, 10, 10); }
+            });
+            particles.forEach(p => { ctx.fillStyle = p.color; ctx.fillRect(p.x, p.y, 6, 6); });
+            powerups.forEach(p => { ctx.fillStyle = p.color; ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI*2); ctx.fill(); ctx.fillStyle = '#fff'; ctx.font = '10px "Press Start 2P"'; ctx.fillText(p.letter, p.x - 4, p.y + 4); });
+            drones.forEach(d => { ctx.save(); ctx.translate(d.x, d.y); ctx.rotate(d.angle); ctx.fillStyle = '#064e3b'; ctx.fillRect(-15, -15, 30, 30); ctx.strokeStyle = '#10b981'; ctx.lineWidth = 4; ctx.strokeRect(-15, -15, 30, 30); ctx.fillStyle = '#ef4444'; ctx.fillRect(-5, -5, 10, 10); ctx.restore(); });
+            if (gameState === 'PLAYING' || gameState === 'READY') drawPlayer();
+            comicTexts.forEach(t => { ctx.globalAlpha = t.life; ctx.fillStyle = t.color; ctx.font = `${t.size}px "Press Start 2P"`; ctx.fillText(t.text, t.x, t.y); });
+            ctx.restore();
+            if(whiteFlash > 0) { ctx.fillStyle = `rgba(255, 255, 255, ${whiteFlash*0.2})`; ctx.fillRect(0,0,width,height); }
+        }
+
+        function drawPlayer() {
+            ctx.save(); ctx.translate(player.x, player.y); ctx.rotate(player.rotation);
+            const hero = HEROES[window.currentHeroKey];
+            if(player.heat > 50 || player.ultraActive || player.gravityMod < 1.0) {
+                ctx.beginPath(); ctx.arc(0, 0, player.radius + 6, 0, Math.PI*2);
+                if (player.gravityMod < 1.0) ctx.fillStyle = 'rgba(244, 114, 182, 0.8)';
+                else ctx.fillStyle = player.ultraActive ? 'rgba(251, 191, 36, 0.8)' : hexToRgba(hero.colors.primary, (player.heat-50)/100);
+                ctx.fill();
+            }
+            ctx.fillStyle = '#fce7f3'; ctx.fillRect(-player.radius, -player.radius, player.radius*2, player.radius*2);
+           
+            if(window.currentHeroKey === 'bakugo') {
+                ctx.fillStyle = '#000'; ctx.fillRect(-20, -10, 40, 10);
+                ctx.fillStyle = '#fcd34d';
+                ctx.beginPath(); ctx.moveTo(-20,-20); ctx.lineTo(-30,-30); ctx.lineTo(-10,-20);
+                ctx.moveTo(20,-20); ctx.lineTo(30,-30); ctx.lineTo(10,-20); ctx.fill();
+            } else if (window.currentHeroKey === 'deku') {
+                ctx.fillStyle = '#064e3b'; ctx.fillRect(-20, -25, 40, 10);
+            } else if (window.currentHeroKey === 'todoroki') {
+                ctx.fillStyle = '#fff'; ctx.fillRect(0, -20, 20, 10);
+                ctx.fillStyle = '#b91c1c'; ctx.fillRect(-20, -20, 20, 10);
+            } else if (window.currentHeroKey === 'uraraka') {
+                ctx.fillStyle = '#99592b'; ctx.fillRect(-22, -22, 44, 12);
+                ctx.fillRect(-22, -22, 10, 30); ctx.fillRect(12, -22, 10, 30);
+                ctx.fillStyle = '#f472b6'; ctx.fillRect(-15, 0, 6, 6); ctx.fillRect(9, 0, 6, 6);
+            } else if (window.currentHeroKey === 'kirishima') {
+                ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.moveTo(-20,-20); ctx.lineTo(0,-35); ctx.lineTo(20,-20); ctx.fill();
+                ctx.fillRect(-20, -20, 40, 5);
+                ctx.fillStyle = '#000'; ctx.fillRect(-22, -5, 4, 15); ctx.fillRect(18, -5, 4, 15);
+            } else if (window.currentHeroKey === 'iida') {
+                ctx.fillStyle = '#1e3a8a'; ctx.fillRect(-20, -20, 40, 15);
+                ctx.fillStyle = '#93c5fd'; ctx.fillRect(-18, -25, 6, 10); ctx.fillRect(12, -25, 6, 10);
+            } else if (window.currentHeroKey === 'kaminari') {
+                ctx.fillStyle = '#facc15'; ctx.fillRect(-22, -20, 44, 10);
+                ctx.fillStyle = '#000'; ctx.beginPath(); ctx.moveTo(-10, -20); ctx.lineTo(-5, -10); ctx.lineTo(0, -20); ctx.fill();
+            } else if (window.currentHeroKey === 'tsuyu') {
+                ctx.fillStyle = '#14532d'; ctx.fillRect(-15, -20, 30, 8);
+                ctx.fillStyle = '#22c55e'; ctx.beginPath(); ctx.arc(0, -5, 12, 0, Math.PI); ctx.fill();
+            } else if (window.currentHeroKey === 'tokoyami') {
+                ctx.fillStyle = '#000'; ctx.beginPath(); ctx.arc(0, 0, 25, 0, Math.PI*2); ctx.fill();
+            } else if (window.currentHeroKey === 'mina') {
+                ctx.fillStyle = '#f472b6'; ctx.fillRect(-15, -20, 30, 15);
+                ctx.fillStyle = '#fbcfe8'; ctx.fillRect(-10, -30, 4, 10); ctx.fillRect(6, -30, 4, 10); // horns
+            } else if (window.currentHeroKey === 'allmight') {
+                ctx.fillStyle = '#1e3a8a'; ctx.fillRect(-25, -15, 50, 20);
+                ctx.fillStyle = '#eab308'; ctx.beginPath(); ctx.moveTo(-15, -15); ctx.lineTo(-25, -35); ctx.lineTo(-5, -15); ctx.fill();
+                ctx.beginPath(); ctx.moveTo(15, -15); ctx.lineTo(25, -35); ctx.lineTo(5, -15); ctx.fill(); // hair
+            }
+            else if (window.currentHeroKey === 'jiro') {
+                 ctx.fillStyle = '#111'; ctx.fillRect(-15, -20, 30, 10);
+                 ctx.fillStyle = '#7e22ce'; ctx.fillRect(-20, -5, 5, 20); ctx.fillRect(15, -5, 5, 20); // jacks
+            }
+            else if (window.currentHeroKey === 'sero') {
+                 ctx.fillStyle = '#f97316'; ctx.fillRect(-15, -20, 30, 10); // helmet
+            }
+            else if (window.currentHeroKey === 'endeavor') {
+                 ctx.fillStyle = '#b91c1c'; ctx.fillRect(-22, -22, 44, 44);
+                 ctx.fillStyle = '#ef4444'; ctx.beginPath(); ctx.arc(0, -15, 15, 0, Math.PI, true); ctx.fill(); // flames
+            }
+
+            // Universal Eyes added on top
+            if (window.currentHeroKey === 'tokoyami') {
+                ctx.fillStyle = '#ef4444'; ctx.fillRect(-15, -5, 10, 5); ctx.fillRect(5, -5, 10, 5); // Red eyes
+            } else if (window.currentHeroKey === 'mina') {
+                ctx.fillStyle = '#111'; ctx.fillRect(-15, -5, 10, 5); ctx.fillRect(5, -5, 10, 5); // Black sclera
+                ctx.fillStyle = '#facc15'; ctx.fillRect(-12, -4, 4, 3); ctx.fillRect(8, -4, 4, 3); // Yellow iris
+            } else {
+                ctx.fillStyle = '#fff'; ctx.fillRect(-15, -5, 10, 5); ctx.fillRect(5, -5, 10, 5); // White eyes
+            }
+
+            ctx.restore();
+        }
+
+        function loop(timestamp) { update(timestamp - lastTime); lastTime = timestamp; draw(); requestAnimationFrame(loop); }
+       
+        // --- START THE GAME ---
+        function init() {
+            window.addEventListener('resize', resize);
+            resize();
+            // Start on Loading Screen by default to check for returning player
+            showScreen('loading');
+           
+            // 2. Try Immediate Local Load
+            const localDataFound = window.SaveSystem.loadFromLocal();
+           
+            if (localDataFound && window.unlockedHeroes.length > 0) {
+                // Returning player — go straight to character select
+                window.toCharSelect();
+            } else {
+                // If local failed, wait for cloud sync OR timeout to show starter
+                window.initTimeout = setTimeout(() => {
+                    if (gameState === 'LOADING') {
+                         // Fallback: No local, no cloud (yet). New player mode.
+                         console.log("No data found. Starting fresh.");
+                         gameState = 'STARTER';
+                         renderStarterScreen();
+                         showScreen('starter');
+                    }
+                }, 2500);
+            }
+
+            if (canvas) {
+                canvas.addEventListener('mousedown', handleInput);
+                canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleInput(e.touches[0]); }, { passive: false });
+            }
+           
+            // Tutorial will be shown at game start via startReadySequence(), not here
+            requestAnimationFrame(loop);
+        }
+
+        init();
+    </script>
+</body>
+</html>
