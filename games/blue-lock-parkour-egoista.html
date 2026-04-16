@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="pt-PT">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Blue Lock: Parkour Egoísta - Ultimate</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Teko:wght@400;600;700&display=swap');
+        body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; background-color: #030308; font-family: 'Teko', sans-serif; touch-action: none; }
+        #gameCanvas { display: block; width: 100%; height: 100%; }
+        #ui-layer { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; display: none; flex-direction: column; justify-content: space-between; }
+        .hud-top { display: flex; justify-content: space-between; padding: 15px 30px; color: white; text-transform: uppercase; }
+        .stats-left { display: flex; flex-direction: column; gap: 5px; }
+        .score-container { font-size: 32px; font-weight: 700; text-shadow: 0 0 10px #ff0033; letter-spacing: 2px; display: flex; align-items: center; gap: 15px; }
+        .ammo-container { font-size: 24px; color: #ccc; display: flex; align-items: center; gap: 8px; }
+        .combo-container { font-size: 26px; color: #00ff66; text-shadow: 0 0 10px #00ff66; font-style: italic; opacity: 0; transition: opacity 0.2s; }
+        .show-combo { opacity: 1; }
+        .ego-container { width: 200px; text-align: right; }
+        .ego-text { font-size: 20px; font-weight: 600; color: #fff; margin-bottom: 5px; transition: color 0.3s; }
+        .ego-bar-bg { width: 100%; height: 14px; background-color: #111; border: 2px solid #444; border-radius: 8px; overflow: hidden; }
+        .ego-bar-fill { width: 0%; height: 100%; background: linear-gradient(90deg, #555, #fff); transition: width 0.2s ease; }
+        #screens { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; background: rgba(3, 3, 8, 0.95); z-index: 10; }
+        .menu-container { display: flex; flex-direction: column; align-items: center; width: 100%; }
+        .title { font-size: 75px; color: #fff; text-shadow: 0 0 20px #ff0033; margin: 0; text-align: center; letter-spacing: 4px; }
+        .subtitle { font-size: 26px; color: #ffaa00; margin-bottom: 30px; letter-spacing: 4px; }
+        .btn { pointer-events: auto; background: rgba(0,0,0,0.5); color: white; border: 3px solid #ff0033; padding: 10px 40px; font-size: 26px; font-family: 'Teko', sans-serif; font-weight: 700; cursor: pointer; text-transform: uppercase; transition: all 0.2s; letter-spacing: 2px; margin: 10px; }
+        .btn:hover { background: #ff0033; color: #fff; transform: scale(1.05); }
+        .char-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 15px; margin-top: 20px; margin-bottom: 30px; max-width: 800px; width: 90%; }
+        .char-card { background: rgba(0, 0, 0, 0.7); border: 2px solid #333; border-radius: 5px; padding: 15px 10px; text-align: center; cursor: pointer; transition: all 0.2s; position: relative; }
+        .char-name { font-size: 28px; font-weight: 700; color: #aaa; letter-spacing: 2px; transition: color 0.2s; }
+        .char-card:hover { transform: scale(1.08) translateY(-5px); background: rgba(20, 20, 20, 0.9); border-color: #fff; }
+        .char-card:hover .char-name { color: #fff; }
+        .controls-hint { margin-top: 20px; color: #ccc; font-size: 18px; text-align: center; }
+        .flow-active-text { position: absolute; top: 35%; left: 50%; transform: translate(-50%, -50%); font-size: 80px; color: #fff; opacity: 0; pointer-events: none; transition: opacity 0.3s; letter-spacing: 5px; font-style: italic; }
+        .show-flow { opacity: 1; animation: pulseFlow 0.6s infinite alternate; }
+        @keyframes pulseFlow { 0% { transform: translate(-50%, -50%) scale(1); } 100% { transform: translate(-50%, -50%) scale(1.15); } }
+        .scanlines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(rgba(255,255,255,0), rgba(255,255,255,0) 50%, rgba(0,0,0,0.3) 50%); background-size: 100% 4px; pointer-events: none; z-index: 5; opacity: 0.5; }
+        .mobile-controls { display: none; position: absolute; bottom: 20px; width: 100%; justify-content: space-between; padding: 0 20px; box-sizing: border-box; pointer-events: none; z-index: 6; }
+        .mobile-group { display: flex; gap: 10px; }
+        .mobile-btn { pointer-events: auto; width: 75px; height: 75px; border-radius: 50%; background: rgba(255, 0, 51, 0.15); border: 3px solid rgba(255, 0, 51, 0.6); color: white; font-family: 'Teko', sans-serif; font-size: 18px; font-weight: 600; display: flex; align-items: center; justify-content: center; user-select: none; }
+        .mobile-btn.shoot { border-color: #00e5ff; background: rgba(0, 229, 255, 0.15); }
+        @media (max-width: 768px) {
+            .char-grid { grid-template-columns: repeat(2, 1fr); }
+            .mobile-controls { display: flex; }
+            .controls-hint { display: none; }
+            .title { font-size: 45px; }
+            .hud-top { padding: 10px; }
+            .score-container { font-size: 22px; }
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+    <div class="scanlines"></div>
+
+    <div id="ui-layer">
+        <div class="hud-top">
+            <div class="stats-left">
+                <div class="score-container">
+                    GOLOS: <span id="scoreVal">0</span>
+                    <span class="ammo-container" id="ammoUI" style="display:none;">⚽ <span id="ammoCount">0</span></span>
+                </div>
+                <div class="combo-container" id="comboText">COMBO AÉREO x2</div>
+            </div>
+            <div class="ego-container">
+                <div class="ego-text">EGO <span id="egoPercent">0%</span></div>
+                <div class="ego-bar-bg">
+                    <div class="ego-bar-fill" id="egoBar"></div>
+                </div>
+            </div>
+        </div>
+        <div class="mobile-controls">
+            <div class="mobile-btn" id="btnSlide">DESLIZAR</div>
+            <div class="mobile-group">
+                <div class="mobile-btn shoot" id="btnShoot">REMATAR</div>
+                <div class="mobile-btn" id="btnJump">SALTAR</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="flow-active-text" id="flowText">ZONA</div>
+
+    <div id="screens">
+        <div class="menu-container" id="mainMenu">
+            <h1 class="title">BLUE LOCK</h1>
+            <div class="subtitle">TREINO EXTREMO ULTIMATE</div>
+            <button class="btn" id="btnToCharSelect">Seleccionar Egoísta</button>
+            <div class="controls-hint">
+                <div>Espaço / Cima: <b>Saltar (x2)</b> | Baixo: <b>Deslizar</b> | Tecla X: <b>Rematar Bola</b></div>
+                <div>Cair EM CIMA: <b>Devorar Obstáculo</b> | Esquiva Rasante: <b>Bónus EGO</b></div>
+            </div>
+        </div>
+
+        <div class="menu-container" id="charSelectMenu" style="display: none;">
+            <h1 class="title" style="font-size: 50px;">O TEU EGO</h1>
+            <div class="char-grid" id="charGrid"></div>
+            <button class="btn" id="btnBackToMain" style="font-size: 20px; padding: 5px 20px; border-color: #555;">Voltar</button>
+        </div>
+
+        <div class="menu-container" id="gameOverMenu" style="display: none;">
+            <h1 class="title" style="color: #ff0033;">ELIMINADO</h1>
+            <div class="subtitle" id="finalScore" style="color: #fff;">GOLOS: 0</div>
+            <button class="btn" id="btnRestart">Tentar Novamente</button>
+            <button class="btn" id="btnChangeChar" style="border-color: #aaa; color: #aaa;">Mudar Personagem</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+
+        const screens = document.getElementById('screens');
+        const mainMenu = document.getElementById('mainMenu');
+        const charSelectMenu = document.getElementById('charSelectMenu');
+        const gameOverMenu = document.getElementById('gameOverMenu');
+        const uiLayer = document.getElementById('ui-layer');
+        
+        const scoreVal = document.getElementById('scoreVal');
+        const ammoUI = document.getElementById('ammoUI');
+        const ammoCount = document.getElementById('ammoCount');
+        const comboText = document.getElementById('comboText');
+        const finalScore = document.getElementById('finalScore');
+        const egoBar = document.getElementById('egoBar');
+        const egoPercent = document.getElementById('egoPercent');
+        const flowText = document.getElementById('flowText');
+        
+        const btnJump = document.getElementById('btnJump');
+        const btnSlide = document.getElementById('btnSlide');
+        const btnShoot = document.getElementById('btnShoot');
+
+        document.getElementById('btnToCharSelect').addEventListener('click', () => showMenu('charSelect'));
+        document.getElementById('btnBackToMain').addEventListener('click', () => showMenu('main'));
+        document.getElementById('btnChangeChar').addEventListener('click', () => showMenu('charSelect'));
+        document.getElementById('btnRestart').addEventListener('click', () => startGame(selectedCharacter));
+
+        const CHARACTERS = [
+            { id: 'isagi', name: 'ISAGI', color: '#00ff66', glow: '#00aa44' },     
+            { id: 'bachira', name: 'BACHIRA', color: '#ffdd00', glow: '#ccaa00' }, 
+            { id: 'rin', name: 'RIN', color: '#00e5ff', glow: '#0088aa' },         
+            { id: 'sae', name: 'SAE', color: '#ff00aa', glow: '#aa0055' },         
+            { id: 'kunigami', name: 'KUNIGAMI', color: '#ff5500', glow: '#aa3300' },
+            { id: 'reo', name: 'REO', color: '#aa00ff', glow: '#6600aa' },         
+            { id: 'barou', name: 'BAROU', color: '#ff0000', glow: '#990000' },     
+            { id: 'aryu', name: 'ARYU', color: '#ffffff', glow: '#aaaaaa' },       
+            { id: 'nagi', name: 'NAGI', color: '#333333', glow: '#777777'}
+        ];
+
+        let selectedCharacter = CHARACTERS[0];
+        const charGrid = document.getElementById('charGrid');
+        CHARACTERS.forEach(char => {
+            const card = document.createElement('div');
+            card.className = 'char-card';
+            card.style.borderColor = '#333';
+            card.onclick = () => { selectedCharacter = char; startGame(char); };
+            card.innerHTML = `<div class="char-name">${char.name}</div>`;
+            charGrid.appendChild(card);
+        });
+
+        function showMenu(menuName) {
+            mainMenu.style.display = 'none'; 
+            charSelectMenu.style.display = 'none'; 
+            gameOverMenu.style.display = 'none';
+            screens.style.display = 'flex'; 
+            uiLayer.style.display = 'none';
+            if(menuName === 'main') mainMenu.style.display = 'flex';
+            if(menuName === 'charSelect') charSelectMenu.style.display = 'flex';
+            if(menuName === 'gameOver') gameOverMenu.style.display = 'flex';
+        }
+
+        const ZOOM = 0.75;
+        let GW, GH; 
+        let GAME_SPEED = 12; 
+        let GRAVITY = 1.2;
+        const BASE_JUMP_POWER = -20; 
+        const GROUND_HEIGHT = 100;
+        
+        let isPlaying = false, animationId, score = 0, ego = 0;
+        const MAX_EGO = 100;
+        let isFlowMode = false, flowTimer = 0, frameCount = 0;
+        const FLOW_DURATION = 250; 
+        
+        let airCombo = 0;
+        let ammo = 0;
+        let shakeTime = 0;
+        let shakeMagnitude = 0;
+
+        function triggerShake(magnitude, frames) {
+            shakeMagnitude = magnitude;
+            shakeTime = frames;
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth; 
+            canvas.height = window.innerHeight;
+            GW = Math.ceil(canvas.width / ZOOM); 
+            GH = Math.ceil(canvas.height / ZOOM);
+        }
+        window.addEventListener('resize', resizeCanvas); 
+        resizeCanvas();
+
+        // Game Classes (Player, Obstacles, Collectibles, etc.) - Abbreviated
+        class Player {
+            constructor(charData) {
+                this.x = GW * 0.15;
+                this.normalWidth = 40; 
+                this.normalHeight = 90; 
+                this.slideHeight = 45;
+                this.width = this.normalWidth; 
+                this.height = this.normalHeight;
+                this.y = GH - GROUND_HEIGHT - this.height;
+                this.vy = 0; 
+                this.jumpCount = 0; 
+                this.maxJumps = 2; 
+                this.isSliding = false;
+                this.baseColor = charData.color; 
+                this.baseGlow = charData.glow;
+                this.hasShield = false;
+                this.boosts = { speed: 0, jump: 0 };
+            }
+
+            update() {
+                this.vy += GRAVITY; 
+                this.y += this.vy;
+                let onGroundOrPlatform = false;
+                const groundY = GH - GROUND_HEIGHT - this.height;
+                
+                if (this.y >= groundY) {
+                    this.y = groundY; 
+                    this.vy = 0; 
+                    this.jumpCount = 0; 
+                    onGroundOrPlatform = true;
+                    if (airCombo > 0) { airCombo = 0; updateUI(); }
+                }
+
+                if (!onGroundOrPlatform && this.vy > 0 && this.jumpCount === 0) {
+                    this.jumpCount = 1; 
+                    if (this.isSliding) this.slide(false);
+                }
+                this.x = GW * 0.15;
+
+                if (frameCount % 3 === 0) {
+                    particles.push(new Particle(this.x + Math.random() * this.width, this.y + this.height - Math.random() * 20, isFlowMode ? '#fff' : this.baseColor, true));
+                }
+
+                if (this.boosts.speed > 0) {
+                    this.boosts.speed--;
+                    if (this.boosts.speed === 0) GAME_SPEED -= 6;
+                }
+                
+                if (this.boosts.jump > 0) {
+                    this.boosts.jump--;
+                    this.maxJumps = 3;
+                    if (this.boosts.jump === 0) this.maxJumps = 2;
+                }
+            }
+
+            jump() {
+                if (this.jumpCount < this.maxJumps && !this.isSliding) {
+                    this.vy = this.boosts.jump > 0 ? BASE_JUMP_POWER * 1.25 : BASE_JUMP_POWER; 
+                    this.jumpCount++;
+                    if (this.jumpCount === 1) createParticles(this.x + this.width/2, this.y + this.height, 15, '#ffffff');
+                    else if (this.jumpCount === 2) { 
+                        createParticles(this.x + this.width/2, this.y + this.height, 25, isFlowMode ? this.baseColor : this.baseGlow); 
+                        this.y -= 5; 
+                    }
+                    else if (this.jumpCount === 3) {
+                        createParticles(this.x + this.width/2, this.y + this.height, 35, '#ff00ff'); 
+                        this.y -= 5;
+                    }
+                }
+            }
+
+            slide(state) {
+                if (this.jumpCount === 0) { 
+                    if (state && !this.isSliding) {
+                        this.isSliding = true; 
+                        this.y += (this.normalHeight - this.slideHeight); 
+                        this.height = this.slideHeight;
+                        createParticles(this.x + this.width, this.y + this.height, 8, '#ffffff');
+                    } else if (!state && this.isSliding) {
+                        this.isSliding = false; 
+                        this.y -= (this.normalHeight - this.slideHeight); 
+                        this.height = this.normalHeight;
+                    }
+                }
+            }
+
+            draw() {
+                ctx.save();
+                let drawColor = isFlowMode ? '#ffffff' : (this.boosts.speed > 0 ? '#ffff00' : this.baseColor);
+                ctx.strokeStyle = drawColor; 
+                ctx.lineWidth = 8; 
+                ctx.lineCap = 'round';
+                const cx = this.x + this.width / 2; 
+                const cy = this.y + this.height;
+
+                // Simple character drawing
+                ctx.beginPath();
+                ctx.arc(cx, cy - 75, 12, 0, Math.PI*2); 
+                ctx.stroke();
+                ctx.beginPath(); 
+                ctx.moveTo(cx, cy - 63); 
+                ctx.lineTo(cx, cy - 35); 
+                ctx.stroke();
+                ctx.beginPath(); 
+                ctx.moveTo(cx - 15, cy - 50); 
+                ctx.lineTo(cx, cy - 35); 
+                ctx.stroke();
+                ctx.beginPath(); 
+                ctx.moveTo(cx + 15, cy - 50); 
+                ctx.lineTo(cx, cy - 35); 
+                ctx.stroke();
+
+                ctx.restore();
+            }
+        }
+
+        class Particle {
+            constructor(x, y, color, isAura = false) {
+                this.x = x; 
+                this.y = y; 
+                this.color = color;
+                if (isAura) {
+                    this.vx = (Math.random() - 0.5) * 2; 
+                    this.vy = -Math.random() * 3 - 1; 
+                    this.life = 1; 
+                    this.decay = Math.random() * 0.03 + 0.02; 
+                    this.size = Math.random() * 3 + 1;
+                } else {
+                    this.vx = (Math.random() - 0.5) * 8; 
+                    this.vy = (Math.random() - 0.5) * 8;
+                    this.life = 1; 
+                    this.decay = Math.random() * 0.05 + 0.02; 
+                    this.size = Math.random() * 5 + 2;
+                }
+            }
+            update() { 
+                this.x += this.vx; 
+                this.y += this.vy; 
+                this.life -= this.decay; 
+            }
+            draw() {
+                ctx.save(); 
+                ctx.globalAlpha = Math.max(0, this.life); 
+                ctx.fillStyle = this.color;
+                ctx.beginPath(); 
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI*2); 
+                ctx.fill(); 
+                ctx.restore();
+            }
+        }
+
+        let player, particles = [], floatingTexts = [];
+
+        function createParticles(x, y, count, color) {
+            for (let i = 0; i < count; i++) particles.push(new Particle(x, y, color));
+        }
+
+        function updateUI() {
+            scoreVal.innerText = score;
+            if (airCombo > 0) {
+                comboText.innerText = `COMBO AÉREO x${airCombo + 1}`;
+                comboText.classList.add('show-combo');
+                comboText.style.color = selectedCharacter.color;
+            } else { 
+                comboText.classList.remove('show-combo'); 
+            }
+
+            const displayEgo = Math.min(ego, MAX_EGO);
+            egoPercent.innerText = Math.floor(displayEgo) + '%';
+            egoBar.style.width = displayEgo + '%';
+            
+            if (isFlowMode) {
+                egoBar.style.background = `linear-gradient(90deg, #fff, ${selectedCharacter.color})`;
+                egoPercent.style.color = selectedCharacter.color;
+                egoPercent.innerText = 'ZONA';
+            } else {
+                egoBar.style.background = `linear-gradient(90deg, #333, ${selectedCharacter.color})`;
+                egoPercent.style.color = '#fff';
+            }
+        }
+
+        function gameLoop() {
+            if (!isPlaying) return;
+            frameCount++;
+
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.save(); 
+            ctx.scale(ZOOM, ZOOM);
+
+            ctx.fillStyle = '#030308'; 
+            ctx.fillRect(0, 0, GW, GH);
+
+            if (shakeTime > 0) {
+                const dx = (Math.random() - 0.5) * shakeMagnitude;
+                const dy = (Math.random() - 0.5) * shakeMagnitude;
+                ctx.translate(dx, dy);
+                shakeTime--;
+            }
+
+            // Simple ground drawing
+            const groundY = GH - GROUND_HEIGHT;
+            ctx.fillStyle = '#0a0a0a'; 
+            ctx.fillRect(0, groundY, GW, GROUND_HEIGHT);
+            ctx.strokeStyle = '#333'; 
+            ctx.lineWidth = 5;
+            ctx.beginPath(); 
+            ctx.moveTo(0, groundY); 
+            ctx.lineTo(GW, groundY); 
+            ctx.stroke();
+
+            if (player) {
+                player.update(); 
+                player.draw();
+            }
+
+            for (let i = particles.length - 1; i >= 0; i--) { 
+                particles[i].update(); 
+                particles[i].draw(); 
+                if (particles[i].life <= 0) particles.splice(i, 1); 
+            }
+
+            ctx.restore();
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function startGame(char) {
+            player = new Player(char);
+            particles = [];
+            score = 0; 
+            ego = 0; 
+            ammo = 0; 
+            airCombo = 0;
+            GAME_SPEED = 12; 
+            frameCount = 0; 
+            isFlowMode = false;
+            
+            updateUI();
+            screens.style.display = 'none'; 
+            uiLayer.style.display = 'flex';
+            isPlaying = true; 
+            gameLoop();
+        }
+
+        function gameOver() {
+            isPlaying = false; 
+            cancelAnimationFrame(animationId);
+            setTimeout(() => {
+                uiLayer.style.display = 'none'; 
+                finalScore.innerText = `GOLOS: ${score}`; 
+                showMenu('gameOver');
+            }, 800);
+        }
+
+        btnJump.addEventListener('touchstart', (e) => { e.preventDefault(); if(player) player.jump(); });
+        btnSlide.addEventListener('touchstart', (e) => { e.preventDefault(); if(player) player.slide(true); });
+        btnSlide.addEventListener('touchend', (e) => { e.preventDefault(); if(player) player.slide(false); });
+
+        window.addEventListener('keydown', (e) => {
+            if (!isPlaying || !player) return;
+            if (e.code === 'Space' || e.code === 'ArrowUp' || e.code === 'KeyW') player.jump();
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') player.slide(true);
+        });
+        window.addEventListener('keyup', (e) => {
+            if (!isPlaying || !player) return;
+            if (e.code === 'ArrowDown' || e.code === 'KeyS') player.slide(false);
+        });
+
+        showMenu('main');
+    </script>
+</body>
+</html>
