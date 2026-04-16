@@ -352,15 +352,1074 @@
         <canvas></canvas>
     </div>
 
-<script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js"></script>
-<script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js"></script>
+<script type="module">
+// --- Firebase Setup for Online Multiplayer ---
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-<!-- Game Script [TRUNCATED FOR SIZE - Full game script from Rafael] -->
-<script>
-// NOTE: Full Python Fighters game script included in original file
-// This is a functional arcade-style fighting game with Firebase multiplayer support
-alert("Python Fighters loaded! Full script available in /root/.openclaw/workspace-geek/games/python-fighters.html");
+let db, auth, currentUser, appId;
+let isOnline = false, isHost = false, onlineRoomCode = null;
+let syncInterval, unsubRoom, unsubEnemy;
+let enemyTargetX = 0, enemyTargetY = 0;
+let lastDamageIdProcessed = 0;
+
+const initFirebase = async () => {
+    try {
+        if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+            const config = JSON.parse(__firebase_config);
+            const app = initializeApp(config);
+            auth = getAuth(app);
+            db = getFirestore(app);
+            appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+            if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                await signInWithCustomToken(auth, __initial_auth_token);
+            } else {
+                await signInAnonymously(auth);
+            }
+           
+            onAuthStateChanged(auth, (user) => {
+                currentUser = user;
+                if(user) {
+                    const btn = document.getElementById('online-btn');
+                    btn.innerText = "ONLINE 1 VS 1";
+                    btn.disabled = false;
+                    btn.style.color = "#0ff";
+                    btn.style.borderColor = "#0ff";
+                }
+            });
+        }
+    } catch (e) {
+        console.error("Firebase init failed. Online mode unavailable.", e);
+        document.getElementById('online-btn').innerText = "ONLINE ERROR";
+    }
+};
+initFirebase();
+
+// --- Core Setup & Dynamic Canvas Sizing ---
+const canvas = document.querySelector('canvas');
+const ctx = canvas.getContext('2d');
+let floorY = 400;
+const gravity = 0.8;
+let player, enemy;
+
+function isPortrait() { return window.innerHeight > window.innerWidth; }
+function resizeCanvas() {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    floorY = canvas.height - 80;
+    if(player && player.position) { if (player.position.y + player.height > floorY) player.position.y = floorY - player.height; }
+    if(enemy && enemy.position) { if(enemy.position.y + enemy.height > floorY) enemy.position.y = floorY - enemy.height; }
+}
+window.addEventListener('resize', resizeCanvas); resizeCanvas();
+
+// --- Data: Roster & Economy (In-Memory State) ---
+let coins = 0;
+const ROSTER = [
+    { id: 'toxic', name: 'TOXIC', color: '#33ff33', bodyColor: '#1a4d1a', vestColor: '#a89f91', pantsColor: '#5c4e3a', price: 0, unlocked: true, specialType: 'projectile' },
+    { id: 'amethyst', name: 'AMETHYST', color: '#ff33ff', bodyColor: '#4d1a4d', vestColor: '#5e6e5c', pantsColor: '#3a4a38', price: 100, unlocked: false, specialType: 'pillar' },
+    { id: 'inferno', name: 'INFERNO', color: '#ff4422', bodyColor: '#4d1500', vestColor: '#c2b28f', pantsColor: '#8a7753', price: 250, unlocked: false, specialType: 'burst' },
+    { id: 'abyss', name: 'ABYSS', color: '#22aaff', bodyColor: '#002b4d', vestColor: '#d0e0e3', pantsColor: '#5c7a8a', price: 400, unlocked: false, specialType: 'dash' },
+    { id: 'shadow', name: 'SHADOW', color: '#888888', bodyColor: '#111', vestColor: '#404', pantsColor: '#000', price: 600, unlocked: false, specialType: 'dash' },
+    { id: 'aurum', name: 'AURUM', color: '#ffd700', bodyColor: '#b8860b', vestColor: '#fff', pantsColor: '#eee', price: 1000, unlocked: false, specialType: 'burst' },
+    { id: 'cyborg', name: 'CYBORG', color: '#00ffff', bodyColor: '#555', vestColor: '#999', pantsColor: '#222', price: 1500, unlocked: false, specialType: 'projectile' },
+    { id: 'carnage', name: 'CARNAGE', color: '#ff0000', bodyColor: '#400', vestColor: '#111', pantsColor: '#222', price: 2500, unlocked: false, specialType: 'pillar' }
+];
+
+let gameState = 'menu'; // menu, select, shop, chest, online-lobby, playing, round-transition, tutorial, over
+let gameMode = 'pvp'; // pvp, pvc, survival, tutorial, online
+let p1Char = null; let p2Char = null;
+let selectingPlayer = 1;
+let selectedShopItem = null;
+
+// Round System variables
+let p1Wins = 0; let p2Wins = 0; let currentRound = 1;
+
+let survivalWave = 1; let survivalKills = 0;
+let gameFrame = 0; let animationId; let timer = 99; let timerId;
+let tutorialInterval; let tutorialStep = 0; let tutorialMessages = [];
+let boostTimeout;
+let projectiles = []; let particles = [];
+
+// DOM Elements
+const screens = {
+    menu: document.getElementById('main-menu'), select: document.getElementById('char-select'),
+    shop: document.getElementById('shop-screen'), chest: document.getElementById('chest-screen'),
+    ui: document.getElementById('ui-layer'), over: document.getElementById('game-over'),
+    controls: document.getElementById('touch-controls'), lobby: document.getElementById('online-lobby')
+};
+const tutorialTextEl = document.getElementById('tutorial-text');
+const boostNotificationEl = document.getElementById('boost-notification');
+const roundAnnouncerEl = document.getElementById('round-announcer');
+const coinDisplayContainer = document.getElementById('coin-display');
+const coinCountEl = document.getElementById('coin-count');
+const exitBtn = document.getElementById('exit-btn');
+const p2ControlsUI = document.getElementById('p2-controls');
+const p1HealthBar = document.getElementById('p1-health'); const p2HealthBar = document.getElementById('p2-health');
+const p1SpecialBar = document.getElementById('p1-special'); const p2SpecialBar = document.getElementById('p2-special');
+const p1NameTag = document.getElementById('p1-name'); const p2NameTag = document.getElementById('p2-name');
+const timeTextEl = document.getElementById('time-text'); const waveCounterEl = document.getElementById('wave-counter');
+const winnerText = document.getElementById('winner-text'); const rewardText = document.getElementById('reward-text');
+const rosterContainer = document.getElementById('roster-container');
+const shopContainer = document.getElementById('shop-container'); const shopBuyBtn = document.getElementById('shop-buy-btn');
+
+function updateCoinDisplay() { coinCountEl.innerText = coins; }
+updateCoinDisplay();
+
+// --- Input Handling ---
+window.inputState = { p1: { left: false, right: false }, p2: { left: false, right: false } };
+const inputState = window.inputState;
+
+window.addEventListener('keydown', (e) => {
+    let key = e.key;
+    if((gameState !== 'playing' && gameState !== 'tutorial') || isPortrait()) return;
+
+    if (['a', 'A'].includes(key)) inputState.p1.left = true;
+    if (['d', 'D'].includes(key)) inputState.p1.right = true;
+    if (['w', 'W'].includes(key) && player && player.velocity.y === 0 && player.hitStun === 0) player.velocity.y = -18;
+    if (['f', 'F', 'j', 'J', ' '].includes(key) && player) { player.attack(); syncAction('attack'); }
+    if (['g', 'G', 'k', 'K', 'c', 'C'].includes(key) && player) { player.specialAttack(); syncAction('special'); }
+
+    if (gameMode === 'pvp' && !isOnline) {
+        if (['ArrowLeft'].includes(key)) inputState.p2.left = true;
+        if (['ArrowRight'].includes(key)) inputState.p2.right = true;
+        if (['ArrowUp'].includes(key) && enemy && enemy.velocity.y === 0 && enemy.hitStun === 0) enemy.velocity.y = -18;
+        if (['o', 'O', '1', 'Enter'].includes(key) && enemy) enemy.attack();
+        if (['p', 'P', '2', 'Shift'].includes(key) && enemy) enemy.specialAttack();
+    }
+});
+
+window.addEventListener('keyup', (e) => {
+    let key = e.key;
+    if (['a', 'A'].includes(key)) inputState.p1.left = false;
+    if (['d', 'D'].includes(key)) inputState.p1.right = false;
+    if (['ArrowLeft'].includes(key)) inputState.p2.left = false;
+    if (['ArrowRight'].includes(key)) inputState.p2.right = false;
+});
+
+window.handleTouchAction = function(playerId, action) {
+    if((gameState !== 'playing' && gameState !== 'tutorial') || isPortrait()) return;
+    let target = playerId === 'p1' ? player : enemy;
+    if(!target) return;
+    if (action === 'jump' && target.velocity.y === 0 && target.hitStun === 0) target.velocity.y = -18;
+    else if (action === 'attack') { target.attack(); if(playerId==='p1') syncAction('attack'); }
+    else if (action === 'special') { target.specialAttack(); if(playerId==='p1') syncAction('special'); }
+}
+
+// --- Menus & Flow ---
+function hideAllScreens() { Object.values(screens).forEach(s => s.classList.add('hidden')); }
+
+window.selectMode = function(mode) {
+    gameMode = mode; p1Char = null; p2Char = null; selectingPlayer = 1;
+    document.getElementById('select-title').innerText = "PLAYER 1 SELECT";
+    document.getElementById('select-title').style.color = "#f33";
+    buildRosterUI(rosterContainer, 'select');
+    hideAllScreens(); screens.select.classList.remove('hidden'); gameState = 'select';
+}
+
+function buildRosterUI(container, type) {
+    container.innerHTML = '';
+    ROSTER.forEach(char => {
+        let card = document.createElement('div');
+        card.className = `char-card ${!char.unlocked ? 'locked' : ''}`;
+       
+        let content = `<div class="color-block" style="background:${char.color}; border: 4px solid ${char.vestColor}"></div>
+                       <div class="char-name-label">${char.name}</div>`;
+        if(!char.unlocked && type === 'shop') content += `<div class="price-tag">${char.price}¢</div>`;
+        if(!char.unlocked && type === 'select') content += `<div class="price-tag">LOCKED</div>`;
+       
+        card.innerHTML = content;
+       
+        if (type === 'select') {
+            if(char.unlocked) card.onclick = () => selectCharacter(char, card);
+        } else if (type === 'shop') {
+            card.onclick = () => previewShopItem(char, card);
+        }
+        container.appendChild(card);
+    });
+}
+
+function selectCharacter(char, cardEl) {
+    if (selectingPlayer === 1) {
+        p1Char = char;
+        if (gameMode === 'pvc' || gameMode === 'survival') {
+            let availableRoster = ROSTER.filter(c => c.id !== p1Char.id);
+            p2Char = availableRoster[Math.floor(Math.random() * availableRoster.length)];
+            startGame();
+        } else if (gameMode === 'online') {
+            openOnlineLobby();
+        } else {
+            selectingPlayer = 2;
+            document.getElementById('select-title').innerText = "PLAYER 2 SELECT";
+            document.getElementById('select-title').style.color = "#33f";
+            Array.from(rosterContainer.children).forEach(c => c.classList.remove('selected-p1'));
+            cardEl.classList.add('selected-p1');
+        }
+    } else if (selectingPlayer === 2) {
+        if(!char.unlocked) return;
+        p2Char = char; startGame();
+    }
+}
+
+// --- Online Multiplayer Logic ---
+function openOnlineLobby() {
+    hideAllScreens(); screens.lobby.classList.remove('hidden'); gameState = 'online-lobby';
+    document.getElementById('online-char-name').innerText = p1Char.name;
+    document.getElementById('lobby-actions').classList.remove('hidden');
+    document.getElementById('join-section').classList.add('hidden');
+    document.getElementById('waiting-section').classList.add('hidden');
+    document.getElementById('join-error').classList.add('hidden');
+    document.getElementById('room-code-input').value = '';
+}
+
+window.showJoinInput = function() {
+    document.getElementById('lobby-actions').classList.add('hidden');
+    document.getElementById('join-section').classList.remove('hidden');
+};
+window.hideJoinInput = function() {
+    document.getElementById('join-section').classList.add('hidden');
+    document.getElementById('lobby-actions').classList.remove('hidden');
+    document.getElementById('join-error').classList.add('hidden');
+};
+
+window.createRoom = async function() {
+    if(!currentUser) return;
+    document.getElementById('lobby-actions').classList.add('hidden');
+    document.getElementById('waiting-section').classList.remove('hidden');
+   
+    onlineRoomCode = Math.floor(1000 + Math.random() * 9000).toString();
+    isHost = true;
+    document.getElementById('display-room-code').innerText = onlineRoomCode;
+
+    const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', onlineRoomCode);
+    await setDoc(roomRef, { host: currentUser.uid, hostChar: p1Char.id, guest: null, guestChar: null, status: 'waiting' });
+
+    unsubRoom = onSnapshot(roomRef, (snapshot) => {
+        const data = snapshot.data();
+        if(data && data.guest && data.status === 'playing') {
+            p2Char = ROSTER.find(c => c.id === data.guestChar) || ROSTER[0];
+            startGame();
+        }
+    });
+};
+
+window.joinRoom = async function() {
+    if(!currentUser) return;
+    const code = document.getElementById('room-code-input').value.trim().toUpperCase();
+    if(code.length !== 4) return;
+
+    const roomRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', code);
+    const snapshot = await getDoc(roomRef);
+
+    if(snapshot.exists() && snapshot.data().status === 'waiting') {
+        onlineRoomCode = code;
+        isHost = false;
+        const hostCharId = snapshot.data().hostChar;
+        p2Char = ROSTER.find(c => c.id === hostCharId) || ROSTER[0];
+       
+        await setDoc(roomRef, { guest: currentUser.uid, guestChar: p1Char.id, status: 'playing' }, { merge: true });
+        startGame();
+    } else {
+        document.getElementById('join-error').classList.remove('hidden');
+    }
+};
+
+function startOnlineSync() {
+    isOnline = true; lastDamageIdProcessed = 0;
+    const myRole = isHost ? 'host' : 'guest';
+    const enemyRole = isHost ? 'guest' : 'host';
+   
+    unsubEnemy = onSnapshot(doc(db, 'artifacts', appId, 'public', 'data', 'room_states', onlineRoomCode + '_' + enemyRole), (snapshot) => {
+        if(snapshot.exists() && enemy && (gameState === 'playing' || gameState === 'round-transition')) {
+            const data = snapshot.data();
+            enemyTargetX = data.x; enemyTargetY = data.y;
+            enemy.facing = data.facing;
+
+            // Apply Network Damage strictly securely (victim side)
+            if (data.damageId && data.damageId !== lastDamageIdProcessed) {
+                lastDamageIdProcessed = data.damageId;
+                player.takeDamage(data.damageDealt);
+            }
+
+            // Sync visual health downward only to prevent "snapbacks" after local hits
+            if(data.hp !== undefined && data.hp < enemy.health) {
+                enemy.health = data.hp; enemy.updateUI();
+            } else if (data.hp === 100 || data.hp === 1) {
+                // Force sync for round resets or sudden death
+                enemy.health = data.hp; enemy.updateUI();
+            }
+
+            if(data.action === 'attack' && !enemy.isAttacking) enemy.attack();
+            if(data.action === 'special' && enemy.specialAnimTimer === 0) {
+                enemy.specialMeter = 100; enemy.specialAttack();
+            }
+        }
+    });
+
+    syncInterval = setInterval(() => {
+        if(player && (gameState === 'playing' || gameState === 'round-transition')) {
+            setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'room_states', onlineRoomCode + '_' + myRole), {
+                x: player.position.x, y: player.position.y,
+                facing: player.facing, hp: player.health,
+                action: 'idle', timestamp: Date.now()
+            }, { merge: true });
+        }
+    }, 100);
+}
+
+function syncAction(actionStr) {
+    if(!isOnline || !onlineRoomCode) return;
+    const myRole = isHost ? 'host' : 'guest';
+    setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'room_states', onlineRoomCode + '_' + myRole), { action: actionStr, timestamp: Date.now() }, { merge: true });
+    setTimeout(() => { setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'room_states', onlineRoomCode + '_' + myRole), { action: 'idle' }, { merge: true }); }, 200);
+}
+
+function syncDamage(amt) {
+    if(!isOnline || !onlineRoomCode) return;
+    const myRole = isHost ? 'host' : 'guest';
+    setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'room_states', onlineRoomCode + '_' + myRole), { damageDealt: amt, damageId: Date.now() }, { merge: true });
+}
+
+// --- Shop & Chest Logic ---
+window.openShop = function() {
+    hideAllScreens(); screens.shop.classList.remove('hidden'); gameState = 'shop';
+    coinDisplayContainer.classList.remove('hidden');
+    selectedShopItem = null; shopBuyBtn.classList.add('hidden');
+    buildRosterUI(shopContainer, 'shop');
+}
+
+function previewShopItem(char, cardEl) {
+    if(char.unlocked) return;
+    Array.from(shopContainer.children).forEach(c => c.classList.remove('selected-p1'));
+    cardEl.classList.add('selected-p1');
+    selectedShopItem = char;
+   
+    shopBuyBtn.classList.remove('hidden');
+    shopBuyBtn.innerText = `BUY ${char.name} (${char.price}¢)`;
+    shopBuyBtn.disabled = coins < char.price;
+}
+
+window.purchaseSelected = function() {
+    if(selectedShopItem && coins >= selectedShopItem.price && !selectedShopItem.unlocked) {
+        coins -= selectedShopItem.price; updateCoinDisplay();
+        selectedShopItem.unlocked = true;
+        selectedShopItem = null; shopBuyBtn.classList.add('hidden');
+        buildRosterUI(shopContainer, 'shop');
+    }
+}
+
+window.openChestScreen = function() {
+    hideAllScreens(); screens.chest.classList.remove('hidden'); gameState = 'chest';
+    coinDisplayContainer.classList.remove('hidden');
+    document.getElementById('chest-graphic').innerText = "🎁";
+    document.getElementById('chest-graphic').className = "";
+    document.getElementById('chest-result').innerHTML = "WIN COINS OR FIGHTERS!";
+    document.getElementById('chest-result').style.color = "#fff";
+    document.getElementById('open-chest-btn').disabled = coins < 1000;
+}
+
+window.openChest = function() {
+    if (coins < 1000) return;
+    coins -= 1000; updateCoinDisplay();
+   
+    const btn = document.getElementById('open-chest-btn');
+    const graphic = document.getElementById('chest-graphic');
+    const result = document.getElementById('chest-result');
+   
+    btn.disabled = true;
+    graphic.className = 'shake';
+    result.innerText = "OPENING...";
+    result.style.color = "#ccc";
+
+    setTimeout(() => {
+        graphic.className = 'pop';
+        graphic.innerText = "✨🎁✨";
+       
+        let roll = Math.random();
+        let lockedChars = ROSTER.filter(c => !c.unlocked);
+       
+        if (roll < 0.15 && lockedChars.length > 0) {
+            let char = lockedChars[Math.floor(Math.random() * lockedChars.length)];
+            char.unlocked = true;
+            result.innerHTML = `JACKPOT!<br>UNLOCKED: <span style="color:${char.color}">${char.name}</span>!`;
+            result.style.color = "#ffd700";
+        } else if (roll < 0.3) {
+            coins += 3000;
+            result.innerHTML = "EPIC WIN!<br>+3000 COINS!";
+            result.style.color = "#0ff";
+        } else if (roll < 0.6) {
+            coins += 1500;
+            result.innerHTML = "NICE!<br>+1500 COINS!";
+            result.style.color = "#3f3";
+        } else {
+            coins += 500;
+            result.innerHTML = "OUCH!<br>+500 COINS.";
+            result.style.color = "#f33";
+        }
+       
+        updateCoinDisplay();
+       
+        setTimeout(() => {
+            graphic.innerText = "🎁";
+            graphic.className = '';
+            btn.disabled = coins < 1000;
+        }, 2000);
+
+    }, 800);
+}
+
+window.returnToMenu = function() {
+    cancelAnimationFrame(animationId); clearTimeout(timerId); clearInterval(tutorialInterval);
+   
+    if(syncInterval) clearInterval(syncInterval);
+    if(unsubRoom) unsubRoom();
+    if(unsubEnemy) unsubEnemy();
+    if(isOnline && isHost && onlineRoomCode) {
+        deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'rooms', onlineRoomCode));
+    }
+    isOnline = false; isHost = false; onlineRoomCode = null;
+
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+    inputState.p1.left = false; inputState.p1.right = false;
+    inputState.p2.left = false; inputState.p2.right = false;
+   
+    waveCounterEl.classList.add('hidden'); timeTextEl.classList.remove('hidden');
+    tutorialTextEl.classList.add('hidden');
+    boostNotificationEl.classList.add('hidden');
+    roundAnnouncerEl.classList.add('hidden');
+    document.getElementById('p1-wins').classList.add('hidden');
+    document.getElementById('p2-wins').classList.add('hidden');
+    exitBtn.classList.add('hidden');
+   
+    coinDisplayContainer.classList.remove('hidden');
+    hideAllScreens(); screens.menu.classList.remove('hidden'); gameState = 'menu';
+}
+
+// --- Game Initialization & Flow ---
+window.startTutorialMode = function() {
+    gameMode = 'tutorial'; p1Char = ROSTER[0]; p2Char = ROSTER[1];
+    startGameInternal();
+    timeTextEl.innerHTML = '∞';
+    tutorialTextEl.classList.remove('hidden');
+   
+    tutorialStep = 0;
+    tutorialMessages = window.innerWidth <= 1024 ? [
+        "WELCOME TO THE DOJO!",
+        "USE THE D-PAD ON THE LEFT TO MOVE/JUMP.",
+        "TAP 'ATK' TO PUNCH AND BUILD YOUR COMBO.",
+        "EVERY HIT FILLS YOUR BLUE SUPER METER.",
+        "AT 100% METER, TAP 'SPC' FOR A UNIQUE SUPER ATTACK!",
+        "PRACTICE AS MUCH AS YOU WANT!"
+    ] : [
+        "WELCOME TO THE DOJO!",
+        "USE W, A, S, D TO MOVE AND JUMP.",
+        "PRESS 'F' OR 'SPACE' TO PUNCH THE DUMMY.",
+        "EVERY HIT FILLS YOUR BLUE SUPER METER.",
+        "AT 100% METER, PRESS 'G' FOR A UNIQUE SUPER ATTACK!",
+        "PRACTICE AS MUCH AS YOU WANT!"
+    ];
+   
+    tutorialTextEl.innerHTML = tutorialMessages[0];
+    clearInterval(tutorialInterval);
+   
+    tutorialInterval = setInterval(() => {
+        tutorialStep++;
+        if (tutorialStep < tutorialMessages.length) {
+            tutorialTextEl.innerHTML = tutorialMessages[tutorialStep];
+        } else {
+            tutorialTextEl.classList.add('hidden');
+            clearInterval(tutorialInterval);
+        }
+    }, 4000);
+}
+
+function startGame() {
+    p1Wins = 0; p2Wins = 0; currentRound = 1; survivalWave = 1; survivalKills = 0;
+    updateWinMarkers();
+
+    if (gameMode === 'survival') {
+        timeTextEl.classList.add('hidden');
+        waveCounterEl.classList.remove('hidden');
+        waveCounterEl.innerText = `WAVE 1`;
+        document.getElementById('p1-wins').classList.add('hidden');
+        document.getElementById('p2-wins').classList.add('hidden');
+    } else {
+        document.getElementById('p1-wins').classList.remove('hidden');
+        document.getElementById('p2-wins').classList.remove('hidden');
+    }
+
+    startGameInternal();
+    if (gameMode !== 'survival' && gameMode !== 'tutorial') {
+        showRoundAnnouncer('ROUND 1<br><span style="font-size:0.5em;color:#fff">FIGHT!</span>');
+    }
+}
+
+function startGameInternal() {
+    hideAllScreens(); screens.ui.classList.remove('hidden'); screens.controls.classList.remove('hidden');
+    coinDisplayContainer.classList.add('hidden');
+    boostNotificationEl.classList.add('hidden');
+    exitBtn.classList.remove('hidden');
+   
+    if(gameMode === 'pvc' || gameMode === 'survival' || gameMode === 'tutorial' || gameMode === 'online') {
+        p2ControlsUI.style.opacity = '0.2'; p2ControlsUI.style.pointerEvents = 'none';
+    } else {
+        p2ControlsUI.style.opacity = '1'; p2ControlsUI.style.pointerEvents = 'auto';
+    }
+   
+    p1NameTag.innerText = `P1: ${p1Char.name}`;
+    if (gameMode === 'survival' || gameMode === 'pvc' || gameMode === 'tutorial') p2NameTag.innerText = `CPU: ${p2Char.name}`;
+    else p2NameTag.innerText = (isOnline ? 'P2(NET): ' : 'P2: ') + p2Char.name;
+
+    let spawnLeft = Math.max(50, canvas.width * 0.15);
+    let spawnRight = Math.min(canvas.width - 150, canvas.width * 0.85 - 70);
+   
+    let pSpawnX = spawnLeft, pFacing = 'right';
+    let eSpawnX = spawnRight, eFacing = 'left';
+
+    if (gameMode === 'online' && !isHost) {
+        pSpawnX = spawnRight; pFacing = 'left';
+        eSpawnX = spawnLeft; eFacing = 'right';
+    }
+
+    player = new MutantFighter({ position: { x: pSpawnX, y: 100 }, charData: p1Char, facing: pFacing, id: 'p1', isCPU: false });
+    enemy = new MutantFighter({ position: { x: eSpawnX, y: 100 }, charData: p2Char, facing: eFacing, id: 'p2', isCPU: (gameMode === 'pvc' || gameMode === 'survival' || gameMode === 'tutorial') });
+   
+    enemyTargetX = enemy.position.x; enemyTargetY = enemy.position.y;
+
+    projectiles = []; particles = []; player.updateUI(); enemy.updateUI();
+    inputState.p1.left = false; inputState.p1.right = false; inputState.p2.left = false; inputState.p2.right = false;
+
+    if (gameMode !== 'survival' && gameMode !== 'tutorial') {
+        timer = 99; timeTextEl.innerHTML = timer; clearTimeout(timerId); decreaseTimer();
+    }
+
+    if (gameMode === 'online') startOnlineSync();
+
+    gameState = 'playing'; gameFrame = 0; animate();
+}
+
+function showRoundAnnouncer(htmlText, duration=2000) {
+    roundAnnouncerEl.innerHTML = htmlText;
+    roundAnnouncerEl.classList.remove('hidden');
+    setTimeout(() => { roundAnnouncerEl.classList.add('hidden'); }, duration);
+}
+
+function updateWinMarkers() {
+    for(let i=1; i<=3; i++) {
+        document.getElementById(`p1-w${i}`).className = `win-dot ${p1Wins >= i ? 'won' : ''}`;
+        document.getElementById(`p2-w${i}`).className = `win-dot ${p2Wins >= i ? 'won' : ''}`;
+    }
+}
+
+function handleRoundEnd() {
+    gameState = 'round-transition';
+    clearTimeout(timerId);
+
+    let p1Dead = player.health <= 0;
+    let p2Dead = enemy.health <= 0;
+    let text = "";
+
+    if (p1Dead && p2Dead) {
+        text = "DRAW!";
+    } else if (p2Dead) {
+        p1Wins++; text = "P1 WINS ROUND!";
+        if(gameMode === 'pvc' || gameMode === 'online') text = "YOU WIN ROUND!";
+    } else {
+        p2Wins++; text = "P2 WINS ROUND!";
+        if(gameMode === 'pvc') text = "CPU WINS ROUND!";
+        if(gameMode === 'online') text = "OPPONENT WINS ROUND!";
+    }
+
+    updateWinMarkers();
+
+    if (p1Wins >= 3 || p2Wins >= 3) {
+        setTimeout(endGame, 2500);
+    } else {
+        showRoundAnnouncer(text, 2500);
+        setTimeout(startNextRound, 3000);
+    }
+}
+
+function startNextRound() {
+    currentRound++;
+   
+    let spawnLeft = Math.max(50, canvas.width * 0.15);
+    let spawnRight = Math.min(canvas.width - 150, canvas.width * 0.85 - 70);
+    let pSpawnX = isOnline && !isHost ? spawnRight : spawnLeft;
+    let eSpawnX = isOnline && !isHost ? spawnLeft : spawnRight;
+
+    player.position.x = pSpawnX; player.position.y = 100; player.facing = isOnline && !isHost ? 'left' : 'right';
+    enemy.position.x = eSpawnX; enemy.position.y = 100; enemy.facing = isOnline && !isHost ? 'right' : 'left';
+    player.velocity = {x:0, y:0}; enemy.velocity = {x:0, y:0};
+    player.hitStun = 0; enemy.hitStun = 0;
+
+    player.maxHealth = 100; enemy.maxHealth = 100;
+    player.health = 100; enemy.health = 100;
+    player.specialMeter = 0; enemy.specialMeter = 0;
+
+    projectiles = []; particles = [];
+    timer = 99; timeTextEl.innerHTML = timer;
+
+    if (currentRound === 5) {
+        showRoundAnnouncer('SUDDEN DEATH<br><span style="font-size:0.5em;color:#f00">FIRST PUNCH WINS!</span>', 2500);
+        player.health = 1; enemy.health = 1; // 1 Health logic for Sudden Death
+    } else {
+        showRoundAnnouncer(`ROUND ${currentRound}<br><span style="font-size:0.5em;color:#fff">FIGHT!</span>`, 1500);
+    }
+
+    player.updateUI(); enemy.updateUI();
+
+    setTimeout(() => {
+        gameState = 'playing';
+        clearTimeout(timerId); decreaseTimer();
+    }, 1500);
+}
+
+// --- Survival Functions ---
+function triggerSurvivalBoost(targetPlayer) {
+    const boosts = [
+        { name: "MAX HEALTH UP!", apply: (p) => { p.maxHealth += 20; p.health += 20; } },
+        { name: "FULL HEAL!", apply: (p) => { p.health = p.maxHealth; } },
+        { name: "DAMAGE UP!", apply: (p) => { p.damageMult += 0.2; } },
+        { name: "SPEED UP!", apply: (p) => { p.speed += 1.5; } },
+        { name: "SUPER CHARGED!", apply: (p) => { p.specialMeter = 100; } }
+    ];
+    let chosenBoost = boosts[Math.floor(Math.random() * boosts.length)];
+    chosenBoost.apply(targetPlayer); targetPlayer.updateUI();
+   
+    boostNotificationEl.innerHTML = `WAVE CLEARED!<br><span style="color:#ff0; font-size:0.7em">${chosenBoost.name}</span>`;
+    boostNotificationEl.classList.remove('hidden');
+    boostNotificationEl.style.animation = 'none'; boostNotificationEl.offsetHeight;
+    boostNotificationEl.style.animation = 'popFade 2.5s forwards';
+   
+    clearTimeout(boostTimeout); boostTimeout = setTimeout(() => { boostNotificationEl.classList.add('hidden'); }, 2500);
+}
+
+function startNextSurvivalWave() {
+    survivalWave++; survivalKills++;
+    let waveReward = 20 + (survivalWave * 5); coins += waveReward; updateCoinDisplay();
+    triggerSurvivalBoost(player);
+
+    let availableRoster = ROSTER.filter(c => c.id !== p1Char.id);
+    p2Char = availableRoster[Math.floor(Math.random() * availableRoster.length)];
+   
+    waveCounterEl.innerText = `WAVE ${survivalWave}`;
+    p2NameTag.innerText = `CPU: ${p2Char.name}`;
+   
+    let spawnRight = Math.min(canvas.width - 150, canvas.width * 0.85 - 70);
+    enemy = new MutantFighter({ position: { x: spawnRight, y: -50 }, charData: p2Char, facing: 'left', id: 'p2', isCPU: true });
+   
+    enemy.maxHealth += (survivalWave * 5); enemy.health = enemy.maxHealth;
+    enemy.damageMult += (survivalWave * 0.05); enemy.speed += (survivalWave * 0.2);
+    enemy.maxAIReaction = Math.max(4, 12 - Math.floor(survivalWave / 2));
+    enemy.updateUI();
+   
+    for(let i=0; i<30; i++) particles.push(new Particle({ position: { x: canvas.width/2, y: canvas.height/2 }, velocity: { x: (Math.random()-0.5)*20, y: (Math.random()-0.5)*20 }, color: '#ffd700', life: 40, size: 8 }));
+}
+
+// --- Game Classes ---
+class Projectile {
+    constructor({position, velocity, color, owner, width=30, height=30, type='normal', lifespan=999}) {
+        this.position = position; this.velocity = velocity; this.color = color;
+        this.width = width; this.height = height;
+        this.owner = owner; this.active = true; this.frame = 0;
+        this.type = type; this.lifespan = lifespan; this.hasHit = false;
+    }
+    draw() {
+        this.frame++; ctx.fillStyle = this.color;
+        if (this.type === 'static') {
+            ctx.globalAlpha = Math.max(0, 1 - (this.frame / this.lifespan));
+            ctx.fillRect(this.position.x, this.position.y, this.width, this.height);
+            ctx.fillStyle = '#fff'; ctx.fillRect(this.position.x + 10, this.position.y + 10, this.width - 20, this.height - 20);
+            ctx.globalAlpha = 1.0;
+        } else {
+            let sizeOffset = Math.sin(this.frame * 0.3) * 6;
+            ctx.fillRect(this.position.x - sizeOffset/2, this.position.y - sizeOffset/2, this.width + sizeOffset, this.height + sizeOffset);
+            ctx.fillStyle = '#fff'; ctx.fillRect(this.position.x + 8, this.position.y + 8, 14, 14);
+            if(this.frame % 2 === 0) particles.push(new Particle({ position: { x: this.position.x + 15, y: this.position.y + 15 }, velocity: { x: -this.velocity.x * 0.3, y: (Math.random()-0.5)*3 }, color: this.color, life: 12, size: 6 }));
+        }
+    }
+    update() {
+        this.draw(); this.position.x += this.velocity.x; this.position.y += this.velocity.y;
+        if (this.frame >= this.lifespan) this.active = false;
+        if (this.position.x > canvas.width + 100 || this.position.x < -100) this.active = false;
+    }
+}
+
+class Particle {
+    constructor({position, velocity, color, life, size=6, type='normal'}) {
+        this.position = position; this.velocity = velocity; this.color = color; this.life = life; this.size = size; this.type = type; this.isStatic = false;
+    }
+    draw() { ctx.fillStyle = this.color; ctx.fillRect(this.position.x, this.position.y, this.size, this.size); }
+    update() {
+        this.draw();
+        if (this.isStatic) { this.life--; return; }
+
+        if (this.type === 'blood') {
+            this.position.x += this.velocity.x;
+            this.position.y += this.velocity.y;
+            this.velocity.y += 0.8; // Heavy gravity for blood
+            if (this.position.y >= floorY) {
+                this.position.y = floorY;
+                this.velocity.y = 0;
+                this.velocity.x *= 0.3; // Friction
+                if(Math.abs(this.velocity.x) < 0.1) this.isStatic = true;
+            }
+        } else {
+            this.position.x += this.velocity.x; this.position.y += this.velocity.y;
+        }
+        this.life--;
+    }
+}
+
+class MutantFighter {
+    constructor({ position, charData, facing, id, isCPU }) {
+        this.position = position; this.velocity = { x: 0, y: 0 };
+        this.width = 70; this.height = 140; this.speed = 10;
+        this.charData = charData; this.facing = facing; this.id = id; this.isCPU = isCPU;
+        this.maxHealth = 100; this.health = 100; this.specialMeter = 0; this.damageMult = 1.0;
+        this.combo = 0; this.comboTimer = 0; this.maxComboTimer = 90;
+        this.isAttacking = false; this.attackHasHit = false; this.attackCooldown = 0; this.hitStun = 0;
+        this.attackBox = { width: 110, height: 40, offset: { x: 0, y: 40 } };
+        this.aiTimer = 0; this.aiKeys = { left: false, right: false, up: false, attack: false, special: false };
+        this.maxAIReaction = 12; this.specialAnimTimer = 0;
+    }
+
+    draw() {
+        let px = this.position.x; let py = this.position.y;
+       
+        if (this.specialAnimTimer > 0) {
+            ctx.globalAlpha = 0.4; ctx.fillStyle = this.charData.color;
+            let auraRadius = 60 + Math.sin(this.specialAnimTimer * 0.5) * 20;
+            ctx.beginPath(); ctx.arc(px + this.width/2, py + this.height/2, auraRadius, 0, Math.PI*2); ctx.fill();
+            ctx.globalAlpha = 1.0;
+        }
+
+        let isFlashing = (this.hitStun > 0 && Math.floor(gameFrame / 4) % 2 === 0);
+        let flashColor = '#fff'; let isRight = this.facing === 'right';
+        let legSwing = (this.velocity.x !== 0 && this.hitStun === 0) ? Math.sin(gameFrame * 0.5) * 12 : 0;
+        let armSwing = (this.velocity.x !== 0 && this.hitStun === 0) ? Math.sin(gameFrame * 0.5) * 8 : Math.sin(gameFrame * 0.1) * 3;
+
+        let bSleeveX = isRight ? px + 15 - armSwing : px + 28 + armSwing;
+        ctx.fillStyle = isFlashing ? flashColor : this.charData.vestColor; ctx.fillRect(bSleeveX, py + 55, 15, 15);
+        ctx.fillStyle = isFlashing ? flashColor : this.charData.bodyColor; ctx.fillRect(bSleeveX + 2, py + 65, 10, 25);
+        ctx.fillStyle = isFlashing ? flashColor : this.charData.color; ctx.fillRect(bSleeveX - 4, py + 85, 22, 16);
+        if(!isFlashing) { ctx.fillStyle = 'rgba(0,0,0,0.5)'; ctx.fillRect(bSleeveX - 6, py + 55, 26, 48); }
+
+        ctx.fillStyle = isFlashing ? flashColor : this.charData.pantsColor; ctx.fillRect(px + 38 - legSwing, py + 100, 14, 25);
+        ctx.fillStyle = isFlashing ? flashColor : '#222'; ctx.fillRect(px + 38 - legSwing, py + 125, 16, 15);
+        ctx.fillStyle = isFlashing ? flashColor : this.charData.pantsColor; ctx.fillRect(px + 20 + legSwing, py + 100, 14, 25);
+        ctx.fillStyle = isFlashing ? flashColor : '#222'; ctx.fillRect(px + 20 + legSwing, py + 125, 16, 15);
+
+        ctx.fillStyle = isFlashing ? flashColor : this.charData.vestColor; ctx.fillRect(px + 15, py + 50, 40, 45);
+        ctx.fillStyle = isFlashing ? flashColor : '#333'; ctx.fillRect(px + 15, py + 95, 40, 6);
+
+        ctx.fillStyle = isFlashing ? flashColor : this.charData.color;
+        let headX = isRight ? px + 20 : px - 10; let headY = py + 10;
+        if (this.isAttacking) { headX += isRight ? 15 : -15; headY += 5; }
+        ctx.fillRect(headX, headY, 60, 40); ctx.fillRect(px + 25, py + 35, 20, 20);
+
+        if (this.hitStun === 0) {
+            ctx.fillStyle = (this.charData.id === 'cyborg' || this.charData.id === 'shadow') ? '#0ff' : '#f00';
+            let eyeX = isRight ? headX + 35 : headX + 15; ctx.fillRect(eyeX, headY + 10, 8, 8);
+            if (this.isAttacking) {
+                ctx.fillStyle = '#fff'; let fangX = isRight ? headX + 45 : headX + 5; ctx.fillRect(fangX, headY + 40, 8, 15);
+                ctx.fillStyle = '#f0f'; let tongueX = isRight ? headX + 60 : headX - 30; ctx.fillRect(tongueX, headY + 25, 30, 4);
+            }
+        }
+
+        let fSleeveX = isRight ? px + 28 + armSwing : px + 15 - armSwing;
+        if (this.isAttacking) {
+            let reach = isRight ? 80 : -80; let armStartX = isRight ? px + 35 : px + 20;
+            ctx.fillStyle = isFlashing ? flashColor : this.charData.vestColor; ctx.fillRect(armStartX - 5, py + 55, 15, 15);
+            ctx.fillStyle = isFlashing ? flashColor : this.charData.bodyColor;
+            ctx.fillRect(isRight ? armStartX : armStartX + reach, py + 60, Math.abs(reach), 12);
+            ctx.fillStyle = isFlashing ? flashColor : this.charData.color;
+            let fistX = isRight ? armStartX + reach : armStartX + reach - 25; ctx.fillRect(fistX, py + 48, 30, 25);
+            if(!isFlashing) {
+                ctx.fillStyle = '#f00'; ctx.fillRect(isRight ? fistX + 18 : fistX + 8, py + 53, 5, 5);
+                ctx.fillStyle = '#fff'; ctx.fillRect(isRight ? fistX + 22 : fistX + 4, py + 70, 4, 10);
+            }
+            ctx.fillStyle = 'rgba(255,255,255,0.1)';
+            ctx.fillRect(isRight ? px + this.width : px - this.attackBox.width, py + this.attackBox.offset.y, this.attackBox.width, this.attackBox.height);
+        } else {
+            ctx.fillStyle = isFlashing ? flashColor : this.charData.vestColor; ctx.fillRect(fSleeveX, py + 55, 16, 15);
+            ctx.fillStyle = isFlashing ? flashColor : this.charData.bodyColor; ctx.fillRect(fSleeveX + 2, py + 60, 12, 35);
+            ctx.fillStyle = isFlashing ? flashColor : this.charData.color; ctx.fillRect(fSleeveX - 6, py + 90, 28, 20);
+            if(!isFlashing) { ctx.fillStyle = '#f00'; ctx.fillRect(isRight ? fSleeveX + 12 : fSleeveX + 2, py + 95, 4, 4); }
+        }
+
+        if (this.combo > 1) {
+            ctx.fillStyle = '#ff0'; ctx.font = '12px "Press Start 2P"'; ctx.fillText(`${this.combo} HITS!`, px - 10, py - 10);
+            ctx.fillStyle = '#333'; ctx.fillRect(px, py + 2, this.width, 4);
+            ctx.fillStyle = '#ff0'; ctx.fillRect(px, py + 2, this.width * (this.comboTimer / this.maxComboTimer), 4);
+        }
+    }
+
+    updateAI(target) {
+        if (this.hitStun > 0 || this.specialAnimTimer > 0 || isOnline || gameState !== 'playing') return;
+        this.velocity.x = 0; this.aiTimer--;
+
+        if (this.aiTimer <= 0) {
+            this.aiTimer = this.maxAIReaction + Math.random() * 10;
+            this.aiKeys = { left: false, right: false, up: false, attack: false, special: false };
+            let dist = target.position.x - this.position.x; let absDist = Math.abs(dist);
+
+            if (this.specialMeter >= 100 && Math.random() > 0.3) { this.aiKeys.special = true; }
+            else if (absDist > 140) { if (dist > 0) this.aiKeys.right = true; else this.aiKeys.left = true; }
+            else {
+                this.aiKeys.attack = Math.random() > 0.2;
+                if (Math.random() > 0.5) { if (dist > 0) this.aiKeys.left = true; else this.aiKeys.right = true; }
+            }
+            if (Math.random() < 0.05 && absDist < 100) this.aiKeys.up = true;
+        }
+
+        if (this.aiKeys.left) this.velocity.x = -this.speed;
+        if (this.aiKeys.right) this.velocity.x = this.speed;
+        if (this.aiKeys.up && this.velocity.y === 0) this.velocity.y = -18;
+        if (this.aiKeys.attack) this.attack();
+        if (this.aiKeys.special) this.specialAttack();
+    }
+
+    update(enemyTarget) {
+        if (this.specialAnimTimer > 0) {
+            this.specialAnimTimer--;
+            if(!isOnline || this.id === 'p1') { this.velocity.x = 0; this.velocity.y = 0; }
+            particles.push(new Particle({ position: { x: this.position.x + this.width/2 + (Math.random()-0.5)*100, y: this.position.y + 50 + (Math.random()-0.5)*100 }, velocity: { x: (Math.random()-0.5)*2, y: (Math.random()-0.5)*2 }, color: this.charData.color, life: 10, size: 4 }));
+            if (this.specialAnimTimer === 10) { this.executeSpecialAbility(enemyTarget); }
+            this.draw(); return;
+        }
+
+        this.draw();
+       
+        if (!isOnline && this.hitStun === 0 && !this.isAttacking && gameMode !== 'tutorial' && gameState === 'playing') {
+            this.facing = (this.position.x + this.width/2 < enemyTarget.position.x + enemyTarget.width/2) ? 'right' : 'left';
+        }
+
+        if (this.hitStun > 0) { this.hitStun--; this.isAttacking = false; }
+        if (this.attackCooldown > 0) this.attackCooldown--;
+        if (this.comboTimer > 0) { this.comboTimer--; if(this.comboTimer <= 0) this.combo = 0; }
+       
+        if (this.isCPU) this.updateAI(enemyTarget);
+
+        if (!isOnline || this.id === 'p1') {
+            this.position.x += this.velocity.x; this.position.y += this.velocity.y;
+            if (this.position.y + this.height + this.velocity.y >= floorY) { this.velocity.y = 0; this.position.y = floorY - this.height; }
+            else { this.velocity.y += gravity; }
+            if (this.position.x < 0) this.position.x = 0;
+            if (this.position.x + this.width > canvas.width) this.position.x = canvas.width - this.width;
+        } else if (isOnline && this.id === 'p2') {
+            if(this.hitStun === 0) {
+                this.position.x += (enemyTargetX - this.position.x) * 0.3;
+                this.position.y += (enemyTargetY - this.position.y) * 0.3;
+            }
+        }
+    }
+
+    attack() {
+        if (this.attackCooldown === 0 && this.hitStun === 0 && this.specialAnimTimer === 0 && gameState === 'playing') {
+            this.isAttacking = true; this.attackHasHit = false; this.attackCooldown = 20;
+            setTimeout(() => { this.isAttacking = false; }, 150);
+        }
+    }
+
+    specialAttack() {
+        if (this.specialMeter >= 100 && this.hitStun === 0 && this.specialAnimTimer === 0 && gameState === 'playing') {
+            this.specialMeter = 0; this.updateUI();
+            this.specialAnimTimer = 45;
+        }
+    }
+   
+    executeSpecialAbility(enemyTarget) {
+        let dir = this.facing === 'right' ? 1 : -1;
+        let cx = this.position.x + this.width/2; let cy = this.position.y + this.height/2;
+
+        if (this.charData.specialType === 'projectile') {
+            let pX = this.facing === 'right' ? this.position.x + this.width : this.position.x - 80;
+            projectiles.push(new Projectile({ position: { x: pX, y: this.position.y + 10 }, velocity: { x: 25 * dir, y: 0 }, color: this.charData.color, owner: this, width: 80, height: 80, type: 'normal' }));
+        }
+        else if (this.charData.specialType === 'pillar') {
+            let enemyCx = enemyTarget.position.x + enemyTarget.width/2;
+            projectiles.push(new Projectile({ position: { x: enemyCx - 50, y: floorY - 300 }, velocity: { x: 0, y: 0 }, color: this.charData.color, owner: this, width: 100, height: 300, type: 'static', lifespan: 25 }));
+        }
+        else if (this.charData.specialType === 'dash') {
+            this.position.x += 350 * dir;
+            if (this.position.x < 0) this.position.x = 0; if (this.position.x + this.width > canvas.width) this.position.x = canvas.width - this.width;
+            let hitboxX = dir === 1 ? this.position.x - 350 : this.position.x;
+            projectiles.push(new Projectile({ position: { x: hitboxX, y: this.position.y }, velocity: { x: 0, y: 0 }, color: this.charData.color, owner: this, width: 350, height: this.height, type: 'static', lifespan: 15 }));
+        }
+        else if (this.charData.specialType === 'burst') {
+            projectiles.push(new Projectile({ position: { x: cx - 180, y: cy - 180 }, velocity: { x: 0, y: 0 }, color: this.charData.color, owner: this, width: 360, height: 360, type: 'static', lifespan: 20 }));
+        }
+    }
+
+    takeDamage(amount) {
+        if (this.specialAnimTimer > 0) return;
+       
+        this.health -= amount; if (this.health < 0) this.health = 0;
+        this.hitStun = 20; this.combo = 0;
+       
+        if (!isOnline || this.id === 'p1') {
+            this.velocity.y = -6; this.velocity.x = this.facing === 'right' ? -6 : 6;
+        }
+
+        this.updateUI();
+
+        // Blood Splatter Particles
+        for(let i=0; i<40; i++) {
+            particles.push(new Particle({
+                position: { x: this.position.x + this.width/2, y: this.position.y + 50 },
+                velocity: { x: (Math.random() - 0.5) * 18, y: (Math.random() - 0.5) * 18 - 5 },
+                color: Math.random() > 0.4 ? '#dd0000' : '#880000',
+                life: 150 + Math.random() * 50,
+                size: Math.random() * 4 + 2,
+                type: 'blood'
+            }));
+        }
+    }
+
+    addComboAndMeter() {
+        this.combo++; this.comboTimer = this.maxComboTimer;
+        this.specialMeter += 10;
+        if (this.specialMeter > 100) this.specialMeter = 100;
+        this.updateUI();
+    }
+
+    updateUI() {
+        let hBar = this.id === 'p1' ? p1HealthBar : p2HealthBar;
+        let sBar = this.id === 'p1' ? p1SpecialBar : p2SpecialBar;
+        hBar.style.width = `${(this.health / this.maxHealth) * 100}%`;
+        sBar.style.width = `${this.specialMeter}%`;
+        sBar.style.backgroundColor = this.specialMeter >= 100 ? '#fff' : '#0ff';
+    }
+}
+
+// --- Main Game Loop ---
+function rectangularCollision({ rect1, rect2 }) {
+    let ax = rect1.facing === 'right' ? rect1.position.x + rect1.width : rect1.position.x - rect1.attackBox.width;
+    let ay = rect1.position.y + rect1.attackBox.offset.y;
+    return (ax < rect2.position.x + rect2.width && ax + rect1.attackBox.width > rect2.position.x &&
+            ay < rect2.position.y + rect2.height && ay + rect1.attackBox.height > rect2.position.y);
+}
+
+function decreaseTimer() {
+    if (gameState === 'playing' && timer > 0 && gameMode !== 'survival' && gameMode !== 'tutorial') {
+        timerId = setTimeout(decreaseTimer, 1000);
+        if (!isPortrait()) { timer--; timeTextEl.innerHTML = timer < 10 ? '0'+timer : timer; }
+    }
+   
+    // Time out logic
+    if (timer === 0 && gameState === 'playing') {
+        if (player.health > enemy.health) enemy.health = 0;
+        else if (enemy.health > player.health) player.health = 0;
+        else { player.health = 0; enemy.health = 0; }
+    }
+}
+
+function endGame() {
+    gameState = 'over'; clearTimeout(timerId); rewardText.innerHTML = '';
+    screens.over.classList.remove('hidden'); screens.controls.classList.add('hidden');
+    exitBtn.classList.add('hidden');
+   
+    if (gameMode === 'survival') {
+        winnerText.innerHTML = 'SURVIVAL OVER'; winnerText.style.color = '#fff';
+        rewardText.innerHTML = `WAVES CLEARED: ${survivalKills}<br>TOTAL REWARD: ${survivalKills * 20}¢`;
+    } else {
+        if (p1Wins === p2Wins) { winnerText.innerHTML = 'DRAW!'; winnerText.style.color = '#fff'; }
+        else if (p1Wins > p2Wins) {
+            winnerText.innerHTML = 'PLAYER 1 WINS MATCH!'; winnerText.style.color = p1Char.color;
+            if(gameMode === 'pvc') { coins += 150; updateCoinDisplay(); rewardText.innerHTML = '+150 COINS!'; }
+            if(gameMode === 'online') { rewardText.innerHTML = 'ONLINE CHAMPION!'; }
+        }
+        else { winnerText.innerHTML = (gameMode==='pvc'?'CPU':(gameMode==='online'?'OPPONENT':'PLAYER 2')) + ' WINS MATCH!'; winnerText.style.color = p2Char.color; }
+    }
+}
+
+function animate() {
+    animationId = window.requestAnimationFrame(animate);
+    if (isPortrait() || (gameState !== 'playing' && gameState !== 'tutorial' && gameState !== 'round-transition')) return;
+    gameFrame++;
+
+    ctx.fillStyle = '#0a1a0a'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.lineWidth = 2;
+    for(let i=0; i<canvas.width; i+=50) {
+        ctx.strokeStyle = `rgba(100, 200, 50, ${0.1 + (i%100===0?0.2:0)})`;
+        ctx.beginPath(); ctx.moveTo(i, floorY); ctx.lineTo(i - 300, canvas.height); ctx.stroke();
+    }
+    for(let i=floorY; i<canvas.height; i+=15) {
+        ctx.strokeStyle = 'rgba(50, 150, 50, 0.3)';
+        ctx.beginPath(); ctx.moveTo(0, i); ctx.lineTo(canvas.width, i); ctx.stroke();
+    }
+    ctx.fillStyle = '#5a9632'; ctx.fillRect(0, floorY-4, canvas.width, 4);
+
+    for (let i = particles.length - 1; i >= 0; i--) { particles[i].update(); if (particles[i].life <= 0) particles.splice(i, 1); }
+
+    if(player && enemy) {
+        if (gameState === 'playing' && !player.isCPU && player.hitStun === 0 && player.specialAnimTimer === 0) {
+            player.velocity.x = 0;
+            if (inputState.p1.left) player.velocity.x = -player.speed;
+            if (inputState.p1.right) player.velocity.x = player.speed;
+        }
+        if (gameState === 'playing' && !isOnline && !enemy.isCPU && enemy.hitStun === 0 && enemy.specialAnimTimer === 0 && gameMode !== 'tutorial') {
+            enemy.velocity.x = 0;
+            if (inputState.p2.left) enemy.velocity.x = -enemy.speed;
+            if (inputState.p2.right) enemy.velocity.x = enemy.speed;
+        }
+
+        player.update(enemy); enemy.update(player);
+
+        // Combat Detection
+        if (gameState === 'playing') {
+            if (player.isAttacking && !player.attackHasHit && rectangularCollision({ rect1: player, rect2: enemy })) {
+                player.attackHasHit = true;
+                let dmg = (8 + (player.combo * 1.5)) * player.damageMult;
+                enemy.takeDamage(dmg);
+                if (isOnline) syncDamage(dmg);
+                player.addComboAndMeter();
+            }
+           
+            if (!isOnline && enemy.isAttacking && !enemy.attackHasHit && rectangularCollision({ rect1: enemy, rect2: player })) {
+                enemy.attackHasHit = true;
+                player.takeDamage((8 + (enemy.combo * 1.5)) * enemy.damageMult);
+                enemy.addComboAndMeter();
+            }
+
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                let p = projectiles[i]; p.update();
+                let target = p.owner === player ? enemy : player;
+               
+                if (!p.hasHit && p.position.x < target.position.x + target.width && p.position.x + p.width > target.position.x && p.position.y < target.position.y + target.height && p.position.y + p.height > target.position.y) {
+                   
+                    if(!isOnline || target.id === 'p1') {
+                        let pdmg = (p.type === 'static' ? 35 : 25) * p.owner.damageMult;
+                        target.takeDamage(pdmg);
+                    } else if (isOnline && p.owner.id === 'p1') {
+                        let pdmg = (p.type === 'static' ? 35 : 25) * p.owner.damageMult;
+                        target.takeDamage(pdmg); // Apply visually
+                        syncDamage(pdmg); // Sync to network
+                    }
+                   
+                    if(!isOnline || p.owner.id === 'p1') p.owner.addComboAndMeter();
+                   
+                    for(let j=0; j<20; j++) particles.push(new Particle({ position: { x: p.position.x+p.width/2, y: p.position.y+p.height/2 }, velocity: { x: (Math.random()-0.5)*15, y: (Math.random()-0.5)*15 }, color: p.color, life: 20, size: 6 }));
+                   
+                    if (p.type === 'normal') { projectiles.splice(i, 1); continue; } else { p.hasHit = true; }
+                } else if (!p.active) { projectiles.splice(i, 1); }
+            }
+        }
+
+        // Death & Round Transition Logic
+        if (gameState === 'playing' && (player.health <= 0 || enemy.health <= 0)) {
+            if (gameMode === 'survival' && enemy.health <= 0) { setTimeout(startNextSurvivalWave, 1000); enemy.health = 999; }
+            else if (gameMode === 'tutorial') { enemy.health = enemy.maxHealth; enemy.updateUI(); }
+            else if (gameMode !== 'survival' && gameMode !== 'tutorial') { handleRoundEnd(); }
+            else { endGame(); }
+        }
+    }
+}
+
+document.fonts.ready.then(() => { hideAllScreens(); screens.menu.classList.remove('hidden'); });
 </script>
 </body>
 </html>
